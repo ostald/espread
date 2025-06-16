@@ -22,3 +22,7 @@ function dipole_field(p, vm)
     return B
 end
 
+function dipole_field_earth(p)
+    vm = [0, 0, -8.22e15] # Tm3
+    return dipole_field(p, vm)
+end

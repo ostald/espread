@@ -278,6 +278,7 @@ Base.setproperty!(x::DotStruct, property::Symbol, value) = getfield(x, :properti
 Base.propertynames(x::DotStruct) = keys(getfield(x, :properties))
 """
 ##
+
 f = Figure()
 ax1 = Axis(f[1, 1],
    ylabel = "y-position (m)",
@@ -311,3 +312,4 @@ ax4 = Axis(f[2, 2],
    title = "relative variation of Kinetic energy: $(round((K_max-K_min)/1, digits = 16))",
    ) #subplot(2,2,4)
 lines!(ax4, t_out,(rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * m_e / 2 /q_e)
+display(GLMakie.Screen(), f)
