@@ -1,7 +1,10 @@
 #using PhysicalConstants
 
-#electron mass
+# electron mass
 me = 9.10938356e-31	#kg
 
-#electron charge
+# electron charge
 qe = 1.6021766208e-19	#C
+
+# earth radius
+re = 6730e3 #m

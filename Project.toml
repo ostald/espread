@@ -1,3 +1,6 @@
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
+SatelliteToolboxAtmosphericModels = "5718ef0a-a30f-426d-bcd9-4cf31dd12909"
+SatelliteToolboxBase = "9e17983a-0463-41a7-9a16-1682db6d8b66"
