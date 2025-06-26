@@ -53,17 +53,17 @@ r0 = gc0 .+ r_n1 .+ r_n2
 v0 = v_n1 .+ v_n2 .+ v_n3
 altitude = norm(r0) - c.re
 
-"""
+
 # plotting start positions, velocity and magnetic fieød
 fig = cm.arrows([Point3f([0, 0, 0])], [Vec3f(B0./norm(B0))], arrowcolor = :red, label = "adf")
 axislegend()
-cm.arrows!([Point3f([0, 0, 0])], [Vec3f(n1u)], arrowcolor = :blue)
-cm.arrows!([Point3f([0, 0, 0])], [Vec3f(n2u)], arrowcolor = :green)
+cm.arrows!([Point3f([0, 0, 0])], [Vec3f(u1)], arrowcolor = :blue)
+cm.arrows!([Point3f([0, 0, 0])], [Vec3f(u2)], arrowcolor = :green)
 cm.arrows!([Point3f([0, 0, 0])], [Vec3f(r_n1 .+ r_n2)])
 cm.arrows!([Point3f(r_n1 .+ r_n2)], [Vec3f(v_n1 .+ v_n2)./norm(v0)])
 cm.arrows!([Point3f(r_n1 .+ r_n2)], [Vec3f(v0)./norm(v0)])
 display(GLMakie.Screen(), fig)
-"""
+
 
 r0v0 = [r0; v0]
 #magnetic field handle for boris mover: (static field)
@@ -110,8 +110,34 @@ hist([findfirst(cumsum(scatter_p) .> r_scatter) for r_scatter in rand(nsample).*
 scatter_phase = rand(1)*2*pi
 # scattering angle along flightpath:
 # depends on secondary electron eenergy
-
+include("energy_secondary_e.jl")
+# there is a lower bound on the E_secondary, given by the resolution (usually 0.1 eV)
+# could be resolved by first selectong E_secondary bin, and assume an even distribution within the bin,
+# and select the exact E_secondary by second random number.
 
 #do collision:
 #1. decide which particle: sum densities, normalize,
 
+
+# resolution at small angles actually moght have a big influence in the spreading!
+# resolution of 0.1deg seems to be good, histogram flatten out at low angles.
+angles_lim = LinRange(0, pi, 1810)
+dA = angles_lim[2] - angles_lim[1]
+angles_mean = angles_lim[1:end-1] .+ dA/2
+unnormalized_pdf = DCSN2(angles_mean, E)
+normalized_pdf = unnormalized_pdf/sum(unnormalized_pdf)
+cdf_discrete = cumsum(normalized_pdf)#/sum(unnormalized_pdf)
+
+nsample = Int(1e6)
+hist([angles_mean[findfirst(cdf_discrete .> r)] for r in rand(nsample)] ./pi .*180,
+    bins = angles_lim/pi*180
+    )
+lines!(angles_mean/pi*180, normalized_pdf*nsample)
+display(current_figure())
+
+# angle limits should start from 0.5deg with intervals of 1deg
+# angle_lim = [0.5, 1.5, 2.5, ...]
+# such that the forward cone in also 1 degree wide
+# higher resolution as above porbably better way to go
+angles_lim = [0; 0.5:1:175.5; 180] .* pi ./ 180
+angles_mean = (angles_lim[1:end-1] .+ angles_lim[2:end]) ./2 
