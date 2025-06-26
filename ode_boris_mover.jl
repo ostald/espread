@@ -1,4 +1,170 @@
 using LinearAlgebra
+include("constants.jl")
+
+
+function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [], OPS = [])
+  # Boris Mover adapted
+  #   - independent variable is number of mean free paths of a particle instead of time
+  #   - include ionization cross sections of N2, O2, O and densities for mean free path calculations
+  #   - removed electric field
+
+  dOPS = (nPerGyro = 20,
+          #event_fcn=[], 
+          #StopAfterEvent = 1,
+          #i_save = 191 #save every 191st iteration 
+          );
+
+  """
+  if OPS != [] #if nargin > 7
+    dOPS = (; dOPS..., OPS...) #merge_structs(dOPS,OPS);
+  end
+  """
+
+  nPerGyro = dOPS.nPerGyro;
+  #i_save = dOPS.i_save
+
+  """
+  if isempty(dOPS.event_fcn)
+    hasEventFcn = false;
+    rvt_e = [];
+  else
+    hasEventFcn = true;
+    event_fcn = dOPS.event_fcn;
+    iEvent = 1;
+    r_prev = r0v0[1:3];
+    v_prev = r0v0[4:6];
+    StopAfterEvent = dOPS.StopAfterEvent;
+    rvt_e = [];
+  end
+  """
+
+  if isempty(wMax) #if nargin < 7 || isempty(wMax)
+    wMax = 0;
+  end
+
+  ## Start assigning output variables:
+  #rvt = zeros((7, 1000)) #rv[6,numel(t)] = 0;
+  #rvt[:,1] = [r0v0; 0]
+  
+  # Initialize the particle position and velocity:
+  r = r0v0[1:3];
+  v = r0v0[4:6];
+  #r = rvt[1:3,1];
+  #v = rvt[4:6,1];
+  Ekin = m*norm(v)^2 / 2
+  cross_sections = sigma(Ekin/c.qe)
+
+
+  # Starting time:
+  #total_path = 0
+  t_running = 0;
+  #i_next = 2;
+  td_factor = 1 ./ nPerGyro;
+  #t = 0:1:600
+  mfp_running = 0
+
+  while mfp_running < n_mfp
+    B = Bin(r);
+
+    ## Update the increment in time
+    #  to ensure nice trajectories along the track use 1 20th (or
+    #  what value we give the parameter: nPerGyro) of a gyro-period,
+    #  or the time to the next requested time for output.
+    #  
+    #  Start with the gyro-frequency:
+    w_c = abs(q*norm(B)/m);
+    Dt = td_factor/(max(w_c,wMax)/2/pi);#t[i_next]-t_running);
+    
+    ## Then the Boris-scheme:
+    q_prime = Dt*q/(2*m);
+    h = q_prime*B;
+    s = 2*h/(1+norm(h)^2);
+    u = v;
+    u_prime = u + cross( u + cross( u, h ), s);
+    
+    v_halfstep = u_prime;
+    r = r + v_halfstep*Dt;
+    v = v_halfstep;
+    
+    """
+    if hasEventFcn
+      EventHappened = event_fcn(t,r,v,E,B,r_prev,v_prev);
+      if EventHappened
+        rvt_e[iEvent].B = B;
+        rvt_e[iEvent].E = E;
+        rvt_e[iEvent].r = r;
+        rvt_e[iEvent].v = v;
+        rvt_e[iEvent].r_prev = r_prev;
+        rvt_e[iEvent].v_prev = v_prev;
+        rvt_e[iEvent].t = t_running;
+        iEvent = iEvent + 1;
+        if StopAfterEvent
+          rvt = rvt[:,1:[i_next-1]];
+          return [rvt, rvt_e]
+        end
+      end
+      r_prev = r;
+      v_prev = v;
+    end
+    """
+    t_running = t_running + Dt;
+
+    #assume path segments are short enough to be approximated by
+    #total_path = total_path + norm(v)*Dt;
+
+    #local mean freep path:
+    altitude = norm(r) - c.re
+    if isnan(densityf(altitude)[1])
+      println("Altitude [m]: " * string(altitude))
+      error("Density is nan. Check altitude range")
+    end
+    lam = sum(cross_sections .* densityf(altitude))
+    
+    #mfp = 1/sum(sigma(Ekin) .* ns(altitude))
+
+
+    #path travelled in fractions of local mfp:
+    dr_mfp = norm(v)*Dt * lam
+    #f_mfp = norm(v)*Dt / mfp
+
+    #running sum of mfp
+    mfp_running = mfp_running + dr_mfp
+    #println(string(i_next))
+    #println(string(t_running))
+    #println(string(mfp_running))
+    # create t_save parameter
+    
+    """
+    if i_next % i_save == 0
+      ind = Int(i_next/i_save)
+      rvt[:,ind] = [r[:];v[:];t_running]
+      println(string(Ekin))
+      println(string(cross_sections))
+      println(string(dr_mfp))
+      println(string(Dt))
+      println(string(lam))
+      println(string(Ekin))
+      println(string(v))
+      println(string(i_next))
+      println(string(t_running))
+      println(string(mfp_running))
+      println(" ")
+      if size(rvt, 2) == ind
+        rvt = hcat(rvt, zeros((7, 1000)))
+      end
+    end
+    """
+    #i_next = i_next+1;
+  end
+  return r, v, t_running
+  #last_ind = ceil(Int, i_next/i_save)
+  #rvt[:,last_ind] = [r[:];v[:];t_running]
+  #println(string(last_ind))
+  #return [rvt[:, 1:last_ind], rvt_e, t_running]
+end
+
+
+
 
 function ode_boris_mover(t, r0v0, q, m, Ein, Bin; wMax = [], OPS = [])
     # ODE_BORIS_MOVER - charged particle equation-of-motion-solver in B and E-fields
@@ -245,7 +411,7 @@ function ode_boris_mover(t, r0v0, q, m, Ein, Bin; wMax = [], OPS = [])
           iEvent = iEvent + 1;
           if StopAfterEvent
             rv = rv[:,1:[i_next-1]];
-            return
+            return [rv, rv_e]
           end
         end
         r_prev = r;
@@ -276,8 +442,79 @@ Dstruct() = DotStruct(Dict{Symbol, Any}())
 Base.getproperty(x::DotStruct, property::Symbol) = getfield(x, :properties)[property]
 Base.setproperty!(x::DotStruct, property::Symbol, value) = getfield(x, :properties)[property] = value
 Base.propertynames(x::DotStruct) = keys(getfield(x, :properties))
-"""
+
 ##
+n_mfp = 1e-2
+E_0 = 50 #EV
+v_0    = (2*c.qe*E_0/c.me).^(1/2); 
+r0v0 = [0, 0, c.re+500e3, v_0, 0, 0]
+Bin(p) = [0, 0, 4.5e-5]
+
+rvt, rvt_e, t_end = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, sigma_tot, densityf)
+
+w_e = (c.qe*norm(Bin([0, 0, 0]))/c.me);       # electron gyro-frequency
+r_gyro = v_0/w_e;               # electron gyro-radius
+
+t_out = rvt[7, :]
+rv = rvt[1:6, :]
+r_c = mean(rv[1:3,:], dims=2)
+f = Figure()
+ax1 = Axis(f[1, 1],
+   ylabel = "y-position (m)",
+   xlabel = "x-position (m)",
+   title = "X-Y trajectory 100 gyrations",
+   ) #subplot(2,2,1)
+scatter!(ax1, rv[1,:], rv[2,:])
+
+ax2 = Axis(f[1, 2],
+   ylabel = "y-velocity (m/s)",
+   xlabel = "x-velocity (m/s)",
+   title = "v_x-v_y 100 gyrations",
+   ) #subplot(2,2,3)
+scatter!(ax2, rv[4,:], rv[5,:])
+
+r_max = maximum(((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]).^2) .^.5);
+r_min = minimum(((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]).^2) .^.5);
+r_g =   mean(((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]).^2) .^.5);
+ax3 = Axis(f[2, 1],
+   ylabel = "(r_max - r_min)/r_g",
+   xlabel = "time (s)",
+   title = "relative variation of gyro-radius: _dollar_(round((r_max-r_min)/r_gyro, digits=6))",
+   ) #subplot(2,2,3)
+lines!(ax3, t_out,((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]) .^2 ) .^.5); #???
+
+K_max = maximum((rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * c.me / 2 /c.qe);
+K_min = minimum((rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * c.me / 2 /c.qe);
+ax4 = Axis(f[2, 2],
+   ylabel = "(K_{max} - K_{min})/K_0",
+   xlabel = "time (s)",
+   title = "relative variation of Kinetic energy: _dollar_round((K_max-K_min)/1, digits = 16))",
+   ) #subplot(2,2,4)
+lines!(ax4, t_out,(rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * c.me / 2 /c.qe);
+display(GLMakie.Screen(), f)
+
+##
+
+
+m_e = 9.1094e-31;        # electron mass (kg)
+q_e = 1.6022e-19;        # electron charge (C)
+B = 5e-5;                # Magnetic field strength (T)
+w_e = (q_e*B/m_e);       # electron gyro-frequency
+T_gyro = 1/(w_e/(2*pi)); # gyro-period
+# Initial conditions and time-span
+E_0 = 50 #EV
+v_0    = (2*q_e*E_0/m_e).^(1/2); # velocity of 1 eV electron (m/s)
+r_gyro = v_0/w_e;               # electron gyro-radius
+t_out = LinRange(0,100e3*T_gyro,10001); # requested time-steps 
+
+# ODE-integration:
+rv, re = ode_boris_mover(t_out,[0;-r_gyro;0;v_0[1];0;0],-q_e,m_e,[0;0;0],[0;0;B]);
+
+# Digestion of solution
+using Statistics
+r_c = mean(rv[1:3,:], dims=2); #center of 
+using GLMakie
+
 
 f = Figure()
 ax1 = Axis(f[1, 1],
@@ -300,7 +537,7 @@ r_g =   mean(((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]).^2) .^.5);
 ax3 = Axis(f[2, 1],
    ylabel = "(r_max - r_min)/r_g",
    xlabel = "time (s)",
-   title = "relative variation of gyro-radius: $(round((r_max-r_min)/r_gyro, digits=6))",
+   title = "relative variation of gyro-radius: _dollar_(round((r_max-r_min)/r_gyro, digits=6))",
    ) #subplot(2,2,3)
 lines!(ax3, t_out,((rv[1,:] .- r_c[1]) .^2 + (rv[2,:] .- r_c[2]) .^2 ) .^.5); #???
 
@@ -309,7 +546,8 @@ K_min = minimum((rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * m_e / 2 /q_e);
 ax4 = Axis(f[2, 2],
    ylabel = "(K_{max} - K_{min})/K_0",
    xlabel = "time (s)",
-   title = "relative variation of Kinetic energy: $(round((K_max-K_min)/1, digits = 16))",
+   title = "relative variation of Kinetic energy: _dollar_(round((K_max-K_min)/1, digits = 16))",
    ) #subplot(2,2,4)
 lines!(ax4, t_out,(rv[4,:] .^2 + rv[5,:] .^2 + rv[6,:] .^2) * m_e / 2 /q_e)
 display(GLMakie.Screen(), f)
+"""
