@@ -268,26 +268,39 @@ function phase_fcn_O(θ, Energy)
     return phfcnE, phfcnI
 end
 
-function convert_phase_fcn_to_3D!(phase_fcn, θ)
+function convert_phase_fcn_to_3D!(phase_fcn, lim_theta)
     # The measurements of scattering probabilities that make up the phase function matrices were done
     # in a plane (2D). Problem with that is that the electrons scatter in the 3 dimensions, so only
     # a fraction of them are measured. This fraction depends on the scattering angle, as the e- will
     # scatter on a "ring" (think about a slice of a sphere) of area 2π*sin(θ)*dθ. This means that the
     # probability of scattering will be underestimated the more we approach angles around 90°. This
     # function is here to correct that.
-    phase_fcn = phase_fcn .* abs.(sin.(θ));     # we don't need the factors 2π and dθ as they are the same for all theta bins.
+
+    # here we integrate over a solid angle dOmega = 2pi sin(theta) dtheta = const * (-cos(th))^theta2_theta1
+    # to account for that effect
+    # In AURORA, only sin(theta) was multiplied, with the intention to sum (integrate) over theta later.
+    # OS 27.06.25
+    dtheta = diff(-cos.(lim_theta))
+    phase_fcn = phase_fcn .* dtheta #abs.(sin.(θ));     # we don't need the factors 2π and dθ as they are the same for all theta bins.
     phase_fcn = phase_fcn ./ sum(phase_fcn);    # so that sum of probabilities = 1
     return nothing
 end
 
-function convert_phase_fcn_to_3D(phase_fcn, θ)
+function convert_phase_fcn_to_3D(phase_fcn, lim_theta)
     # The measurements of scattering probabilities that make up the phase function matrices were done
     # in a plane (2D). Problem with that is that the electrons scatter in the 3 dimensions, so only
     # a fraction of them are measured. This fraction depends on the scattering angle, as the e- will
     # scatter on a "ring" (think about a slice of a sphere) of area 2π*sin(θ)*dθ. This means that the
     # probability of scattering will be underestimated the more we approach angles around 90°. This
     # function is here to correct that.
-    phase_fcn = phase_fcn .* abs.(sin.(θ));     # we don't need the factors 2π and dθ as they are the same for all theta bins.
+
+    # here we integrate over a solid angle dOmega = 2pi sin(theta) dtheta = const * (-cos(th))^theta2_theta1
+    # to account for that effect
+    # In AURORA, only sin(theta) was multiplied, with the intention to sum (integrate) over theta later.
+    # OS 27.06.25
+    dtheta = diff(-cos.(lim_theta))
+    phase_fcn = phase_fcn .* dtheta #abs.(sin.(θ));     # we don't need the factors 2π and dθ as they are the same for all theta bins.
     phase_fcn = phase_fcn ./ sum(phase_fcn);    # so that sum of probabilities = 1
     return phase_fcn
 end
+
