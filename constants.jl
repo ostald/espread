@@ -11,3 +11,11 @@ qe = 1.6021766208e-19	#C
 re = 6378e3  #m
 ,
 )
+
+function E_ev(v_abs)
+    return v_abs^2 * c.me  / (2 * c.qe) 
+end
+
+function v_abs(E_ev)
+    return sqrt(E_ev * c.qe * 2 / c.me)
+end
