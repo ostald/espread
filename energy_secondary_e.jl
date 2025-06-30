@@ -5,7 +5,7 @@ function E_secondary_e_N2(E_primary, E_ionization)
     # limited by E_max
     # follows a Lorentz/Cauchy Distribution, but we can simply use Opal's approxiamtion
     # see Opal et al 1972
-    E_hat = 11.4
+    E_hat = 11.4  #eV
     E_max = (E_primary - E_ionization)/2
     ps(Es) = 1/(Es^2 + E_hat^2)
     #normalization
@@ -27,7 +27,7 @@ function E_secondary_e_O2(E_primary, E_ionization)
     # limited by E_max
     # follows a Lorentz/Cauchy Distribution, but we can simply use Opal's approxiamtion
     # see Opal et al 1972
-    E_hat = 15.2
+    E_hat = 15.2 #eV
     E_max = (E_primary - E_ionization)/2
     ps(Es) = 1/(Es^2 + E_hat^2)
     #normalization
@@ -120,9 +120,9 @@ function E_secondary_e_O(E_primary, E_ionization)
     """
 
     if E_primary < 100
-        A = 12.6  
+        A = 12.6  #eV
     elseif E_primary > 2000
-        A = 13.7
+        A = 13.7 #eV
     else
         A = A_itp(E_primary)
     end
