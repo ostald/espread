@@ -23,14 +23,14 @@ lat_rad = loc_gmag[1] * pi /180
 loc_geod = [69.58, 19.23]
 
 #start point: gyrocenter at t= 0
-gc0 = (c.re + 500e3) .* [0, cos(lat_rad), sin(lat_rad)]
+gc0 = (c.re + 600e3) .* [0, cos(lat_rad), sin(lat_rad)]
 altitude = norm(gc0) - c.re
 
 
 #start velocity
 #energy must be larger than 15.6
 E = 10000.0 #eV must be float!
-v = sqrt(2*E*c.qe/c.me)         # convert to veloicty => relativistic?
+v = v_abs(E)        # convert to veloicty => relativistic?
 pitch = rand()*pi/2         # pitch angle
 v_par  = v*cos(pitch)       # calculate parallel component
 # for parallel component, find normal vecotors, get random phase, distribute velocity accordingly
@@ -71,7 +71,7 @@ Bin(p) = dipole_field_earth(p)
 
 #mean free path calculations
 #msis altitude resolution could be coarser??
-hmsis = 80e3:1e3:600e3 #km
+hmsis = 80e3:1e3:700e3 #km
 densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
 
@@ -97,6 +97,8 @@ scatter_p = vcat((cs_all(E) .* ns)...)
 r_scatter = rand(1)[1]*sum(scatter_p)
 idx_scatter = findfirst(cumsum(scatter_p) .> r_scatter)
 
+
+
 """
 nsample = Int(1e7)
 hist([findfirst(cumsum(scatter_p) .> r_scatter) for r_scatter in rand(nsample).*sum(scatter_p)],
@@ -118,26 +120,3 @@ include("energy_secondary_e.jl")
 #do collision:
 #1. decide which particle: sum densities, normalize,
 
-
-# resolution at small angles actually moght have a big influence in the spreading!
-# resolution of 0.1deg seems to be good, histogram flatten out at low angles.
-angles_lim = LinRange(0, pi, 1810)
-dA = angles_lim[2] - angles_lim[1]
-angles_mean = angles_lim[1:end-1] .+ dA/2
-unnormalized_pdf = DCSN2(angles_mean, E)
-normalized_pdf = unnormalized_pdf/sum(unnormalized_pdf)
-cdf_discrete = cumsum(normalized_pdf)#/sum(unnormalized_pdf)
-
-nsample = Int(1e6)
-hist([angles_mean[findfirst(cdf_discrete .> r)] for r in rand(nsample)] ./pi .*180,
-    bins = angles_lim/pi*180
-    )
-lines!(angles_mean/pi*180, normalized_pdf*nsample)
-display(current_figure())
-
-# angle limits should start from 0.5deg with intervals of 1deg
-# angle_lim = [0.5, 1.5, 2.5, ...]
-# such that the forward cone in also 1 degree wide
-# higher resolution as above porbably better way to go
-angles_lim = [0; 0.5:1:175.5; 180] .* pi ./ 180
-angles_mean = (angles_lim[1:end-1] .+ angles_lim[2:end]) ./2 
