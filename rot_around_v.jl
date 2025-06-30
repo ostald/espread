@@ -3,7 +3,9 @@ function rot_around_v(e_rot, phi)
     #   
     # Calling:
     # R = rot_around_v(e_rot,phi)
-    
+    # 
+    # Multiply from left: v_out = R * v_in
+    #
     #   Copyright 2002 Bjorn Gustavsson, <bjorn.gustavsson@irf.se>
     #   This is free software, licensed under GNU GPL version 2 or later
     
