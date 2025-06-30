@@ -2,6 +2,7 @@
 include("data_electron/e_N2_cross_sections.jl")
 include("data_electron/e_O2_cross_sections.jl")
 include("data_electron/e_O_cross_sections.jl")
+include("scattering.jl")
 
 using DelimitedFiles: readdlm
 
@@ -17,11 +18,42 @@ function get_scattering_parameters(species_name)
     energy_levels = energy_secondary_matrix[:, 1]
     n_secondary_el = Int.(energy_secondary_matrix[:, 2])
 
-    scat_par = Matrix{Any}(undef, length(function_name), 4)
+    scat_par = Matrix{Any}(undef, length(function_name), 6)
     scat_par[:, 1] = function_name
     scat_par[:, 2] = energy_levels
     scat_par[:, 3] = n_secondary_el
     scat_par[:, 4] = [getfield(Main, f) for f in function_handle] #assign functions from x_cross_sections.jl
+    scat_par[:, 5] .= species_name
+    
+    """
+    if species_name == "N2"
+        scat_par[:, 6] .= scatter_inelastic_N2
+        scat_par[1, 6]  = scatter_elastic_N2
+        scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_N2
+    elseif species_name == "O2"
+        scat_par[:, 6] .= scatter_inelastic_O2
+        scat_par[1, 6]  = scatter_elastic_O2
+        scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_O2
+    elseif species_name == "O"
+        scat_par[:, 6] .= scatter_inelastic_O
+        scat_par[1, 6]  = scatter_elastic_O
+        scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_O
+    end
+    """
+
+    if species_name == "N2"
+        scat_par[:, 6] .= ["N2", "inelastic"] 
+        scat_par[1, 6]  = ["N2", "elastic"]
+        scat_par[scat_par[:, 3] .> 0, 6] .= ["N2", "ionizing"]]
+    elseif species_name == "O2"
+        scat_par[:, 6] .= ["O2", "inelastic"] 
+        scat_par[1, 6]  = ["O2", "elastic"]
+        scat_par[scat_par[:, 3] .> 0, 6] .= ["O2", "ionizing"]
+    elseif species_name == "O"
+        scat_par[:, 6] .= ["O", "inelastic"] 
+        scat_par[1, 6]  = ["O", "elastic"]
+        scat_par[scat_par[:, 3] .> 0, 6] .= ["O", "ionizing"]
+    end
     
     return scat_par
 end

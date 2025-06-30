@@ -51,8 +51,8 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
   v = r0v0[4:6];
   #r = rvt[1:3,1];
   #v = rvt[4:6,1];
-  Ekin = m*norm(v)^2 / 2
-  cross_sections = sigma(Ekin/c.qe)
+  Ekin = E_ev(norm(v))
+  cross_sections = sigma(Ekin)
 
 
   # Starting time:
@@ -138,12 +138,10 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
     if i_next % i_save == 0
       ind = Int(i_next/i_save)
       rvt[:,ind] = [r[:];v[:];t_running]
-      println(string(Ekin))
       println(string(cross_sections))
       println(string(dr_mfp))
       println(string(Dt))
       println(string(lam))
-      println(string(Ekin))
       println(string(v))
       println(string(i_next))
       println(string(t_running))
