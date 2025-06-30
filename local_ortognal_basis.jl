@@ -10,6 +10,6 @@ function local_orthogonal_basis(vector)
     n1u = n1/norm(n1)
     n2 = cross(n1u, vector)
     n2u = n2/norm(n2)
-    n3u = vector/norm(vector)
+    n3u = vector/norm(vector) # the parellel base vector
     return n1u, n2u, n3u
 end
