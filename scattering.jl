@@ -84,16 +84,6 @@ E_out = E_ev(norm(v_in)) *2
 v_out = scatter(v_in, E_out, theta, phi)
 """
 
-function scatter_inelastic_N2(v_in, E_exc)
-    E_in = E_ev(norm(v_in))
-    theta = scatter_angle_el_inel(E_in, phase_fcn_N2, "inelastic", 1)
-    phi = rand()*2*pi
-    E_out = E_in - E_exc
-    @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
-    return v_out
-end
-
 function scatter_elastic_N2(v_in, E_exc = 0)
     E_in = E_ev(norm(v_in))
     theta = scatter_angle_el_inel(E_in, phase_fcn_N2, "elastic", 1)
@@ -104,6 +94,18 @@ function scatter_elastic_N2(v_in, E_exc = 0)
     v_out = scatter(v_in, E_out, theta, phi)
     return v_out
 end
+
+
+function scatter_inelastic_N2(v_in, E_exc)
+    E_in = E_ev(norm(v_in))
+    theta = scatter_angle_el_inel(E_in, phase_fcn_N2, "inelastic", 1)
+    phi = rand()*2*pi
+    E_out = E_in - E_exc
+    @assert E_out > 0
+    v_out = scatter(v_in, E_out, theta, phi)
+    return v_out
+end
+
 
 """
 v_in = [0, 0, 1] * v_abs(500)
@@ -116,7 +118,7 @@ function scatter_ion_N2(v_in, E_ionization)
     E_primary = E_ev(norm(v_in))
     pdf, E_max = E_secondary_e_N2(E_primary, E_ionization)
     Es_out = sample_secondary(pdf, E_max)
-    println(string(Es_out/E_primary), "  ", string(Es_out))
+    #println(string(Es_out/E_primary), "  ", string(Es_out))
     Ep_out = E_primary - Es_out - E_ionization
     @assert Ep_out > 0
     if Es_out > E_primary
@@ -141,32 +143,118 @@ function scatter_ion_N2(v_in, E_ionization)
 end
 
 
+
+
+function scatter_elastic_O2(v_in, E_exc = 0)
+    E_in = E_ev(norm(v_in))
+    theta = scatter_angle_el_inel(E_in, phase_fcn_O2, "elastic", 1)
+    #println(string(theta/pi*180))
+    phi = rand()*2*pi
+    E_out = E_in
+    @assert E_out > 0
+    v_out = scatter(v_in, E_out, theta, phi)
+    return v_out
+end
+
+
+function scatter_inelastic_O2(v_in, E_exc)
+    E_in = E_ev(norm(v_in))
+    theta = scatter_angle_el_inel(E_in, phase_fcn_O2, "inelastic", 1)
+    phi = rand()*2*pi
+    E_out = E_in - E_exc
+    @assert E_out > 0
+    v_out = scatter(v_in, E_out, theta, phi)
+    return v_out
+end
+
+
+function scatter_ion_O2(v_in, E_ionization)
+    E_primary = E_ev(norm(v_in))
+    pdf, E_max = E_secondary_e_O2(E_primary, E_ionization)
+    Es_out = sample_secondary(pdf, E_max)
+    #println(string(Es_out/E_primary), "  ", string(Es_out))
+    Ep_out = E_primary - Es_out - E_ionization
+    @assert Ep_out > 0
+    if Es_out > E_primary
+        theta = pi/4
+        phi = rand()*2*pi
+        vp_out = scatter(v_in, Ep_out, theta, phi)
+
+        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+    else
+        #scatter isotrop: primary electron in unchanged
+        vp_out = v_in/norm(v_in) * v_abs(Ep_out)
+        # secondary scatter isotropically
+        direction = randn(Float64, 3)
+        vs_out = direction/norm(direction) * v_abs(Es_out)
+        """
+        nsample = Int(1e4)
+        direction2 = randn(Float64, (nsample, 3))
+        meshscatter([tuple(p...) ./norm(p) for p in eachrow(direction2)], markersize = 0.01)
+        """
+    end
+    return vp_out, vs_out
+end
+
+
+
+function scatter_elastic_O(v_in, E_exc = 0)
+    E_in = E_ev(norm(v_in))
+    theta = scatter_angle_el_inel(E_in, phase_fcn_O, "elastic", 1)
+    #println(string(theta/pi*180))
+    phi = rand()*2*pi
+    E_out = E_in
+    @assert E_out > 0
+    v_out = scatter(v_in, E_out, theta, phi)
+    return v_out
+end
+
+
+function scatter_inelastic_O(v_in, E_exc)
+    E_in = E_ev(norm(v_in))
+    theta = scatter_angle_el_inel(E_in, phase_fcn_O, "inelastic", 1)
+    phi = rand()*2*pi
+    E_out = E_in - E_exc
+    @assert E_out > 0
+    v_out = scatter(v_in, E_out, theta, phi)
+    return v_out
+end
+
+function scatter_ion_O(v_in, E_ionization)
+    E_primary = E_ev(norm(v_in))
+    pdf, E_max = E_secondary_e_O(E_primary, E_ionization)
+    Es_out = sample_secondary(pdf, E_max)
+    #println(string(Es_out/E_primary), "  ", string(Es_out))
+    Ep_out = E_primary - Es_out - E_ionization
+    @assert Ep_out > 0
+    if Es_out > E_primary
+        theta = pi/4
+        phi = rand()*2*pi
+        vp_out = scatter(v_in, Ep_out, theta, phi)
+
+        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+    else
+        #scatter isotrop: primary electron in unchanged
+        vp_out = v_in/norm(v_in) * v_abs(Ep_out)
+        # secondary scatter isotropically
+        direction = randn(Float64, 3)
+        vs_out = direction/norm(direction) * v_abs(Es_out)
+        """
+        nsample = Int(1e4)
+        direction2 = randn(Float64, (nsample, 3))
+        meshscatter([tuple(p...) ./norm(p) for p in eachrow(direction2)], markersize = 0.01)
+        """
+    end
+    return vp_out, vs_out
+end
+
+
+
+
 function record_secondary(r, vs_out, secondary_e)
     secondary_e = [secondary_e..., [r, vs_out]]
     return secondary_e 
 end
-
-function scatter_inelastic_O2()
-    return 0
-end
-function scatter_elastic_O2()
-    return 0
-end
-function scatter_ion_O2()
-    return 0
-
-end
-function scatter_inelastic_O()
-    return 0
-end
-function scatter_elastic_O()
-    return 0
-end
-function scatter_ion_O()
-    return 0
-end
-
-
 
 
 
