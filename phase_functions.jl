@@ -180,10 +180,14 @@ function build_DCSO()
     return DCSO
 end
 
+"""
 const DCSN2 = build_DCSN2()
 const DCSO2 = build_DCSO2()
 const DCSO = build_DCSO()
-
+"""
+DCSN2 = build_DCSN2()
+DCSO2 = build_DCSO2()
+DCSO = build_DCSO()
 
 ## ----------------------------------------------------- ##
 
