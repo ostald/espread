@@ -2,7 +2,167 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [], OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
+  # returns:
+  #   state:  0=failure, 
+  #           1=regular completion until n_mfp is reached, 
+  #           2=particle is outgoing and above max_altitude
+  #   r: particle position
+  #   v: particle velocity
+  #   t: particle time, starting with t=0 at r0v0
+  # Boris Mover adapted
+  #   - independent variable is number of mean free paths of a particle instead of time
+  #   - include ionization cross sections of N2, O2, O and densities for mean free path calculations
+  #   - removed electric field
+
+  dOPS = (nPerGyro = 20,
+          wMax = 0,
+          max_altitude = [],
+          trace = false,
+          i_save = 1 #save every 191st iteration 
+          );
+
+  
+  if OPS != [] #if nargin > 7
+    dOPS = (; dOPS..., OPS...) #merge_structs(dOPS,OPS);
+  end
+
+  nPerGyro = dOPS.nPerGyro;
+  wMax = dOPS.wMax;
+  trace = dOPS.trace;
+  i_save = dOPS.i_save;
+  max_altitude = dOPS.max_altitude
+
+  if max_altitude == []
+    max_altitude = densityf.nN2_ip.heights[end]
+  end
+
+  if trace
+    ## Start assigning tracing variables:
+    rvt = zeros((7, 1000)) #rv[6,numel(t)] = 0;
+    rvt[:,1] = [r0v0; 0]
+    it_current = 0
+  end
+  
+  # Initialize the particle position and velocity:
+  r = r0v0[1:3];
+  v = r0v0[4:6];
+  #r = rvt[1:3,1];
+  #v = rvt[4:6,1];
+  Ekin = E_ev(norm(v))
+  cross_sections = sigma(Ekin)
+
+
+  # Starting time:
+  #total_path = 0
+  t_running = 0;
+  td_factor = 1 ./ nPerGyro;
+  mfp_running = 0
+
+  while mfp_running < n_mfp
+    B = Bin(r);
+
+    ## Update the increment in time
+    #  to ensure nice trajectories along the track use 1 20th (or
+    #  what value we give the parameter: nPerGyro) of a gyro-period,
+    #  or the time to the next requested time for output.
+    #  
+    #  Start with the gyro-frequency:
+    w_c = abs(q*norm(B)/m);
+    Dt = td_factor/(max(w_c,wMax)/2/pi);#t[i_next]-t_running);
+    
+    ## Then the Boris-scheme:
+    q_prime = Dt*q/(2*m);
+    h = q_prime*B;
+    s = 2*h/(1+norm(h)^2);
+    u = v;
+    u_prime = u + cross( u + cross( u, h ), s);
+    
+    v_halfstep = u_prime;
+    r = r + v_halfstep*Dt;
+    v = v_halfstep;
+    
+    t_running = t_running + Dt;
+
+    if trace
+      it_current = it_current + 1 
+      if it_current % i_save == 0     #-1 such that first iteration gets saved
+        ind = Int(it_current/i_save)+1
+        rvt[:,ind] = [r[:]; v[:]; t_running]
+        """
+        println(string(cross_sections))
+        println(string(dr_mfp))
+        println(string(Dt))
+        println(string(lam))
+        println(string(v))
+        println(string(it_current))
+        println(string(t_running))
+        println(string(mfp_running))
+        println(" ")
+        """
+        if size(rvt, 2) == ind
+          rvt = hcat(rvt, zeros((7, 1000)))
+        end
+      end
+    end
+
+    # add up path segments
+    #total_path = total_path + norm(v)*Dt;
+
+    # local mean freep path:
+    altitude = norm(r) - c.re
+    if altitude > max_altitude
+      # dot(v, B) projects v on B, yielding v_par*norm(B)
+      # this gets rid of v_perp
+      # dot(B, r) projects B in r. r is by definition outwards, i.e. sign(dot(B, r)) < 0 for inward pointing B
+      # if dot(v, B)*dot(B, r) > 0, the particle moves outwards
+      if dot(v, B)*dot(B, r) > 0
+        # if particle moves outwards, and crosses max_altitude,
+        # return state 2, r, v, t
+        if trace
+          ind = Int(it_current/i_save)+1
+          return 2, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
+        else
+          return 2, r, v, t_running
+        end
+      else
+        println("Altitude over maximum, velocity invards.")
+        println("Altitude [m]: " * string(altitude))
+        if trace
+          # if tracing is on, return state 0 (failure) and trace (rvt)
+          ind = Int(it_current/i_save)+1
+          return 0, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
+        else
+          #if trace is off, verify if altitude is in interpolation range
+          @assert altitude < densityf.nN2_ip.heights[end]
+        end
+      end
+    end
+    
+    #local mean free path:
+    #mfp = 1/sum(cross_sections .* densityf(altitude))
+    lam = sum(cross_sections .* densityf(altitude))
+    @assert !isnan(lam)    
+
+    #path travelled in fractions of local mfp:
+    dr_mfp = norm(v)*Dt * lam
+    #dr_mfp = norm(v)*Dt / mfp
+
+    #running sum of mfp
+    mfp_running = mfp_running + dr_mfp
+  end
+
+  if trace
+    ind = Int(it_current/i_save)+1
+    return 1, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
+  else
+    return 1, r, v, t_running
+  end
+end
+
+
+
+function ode_boris_mover_mfp_backup(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [], OPS = [])
   # Boris Mover adapted
   #   - independent variable is number of mean free paths of a particle instead of time
   #   - include ionization cross sections of N2, O2, O and densities for mean free path calculations
@@ -11,7 +171,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
   dOPS = (nPerGyro = 20,
           #event_fcn=[], 
           #StopAfterEvent = 1,
-          #i_save = 191 #save every 191st iteration 
+          i_save = 1 #save every 191st iteration 
           );
 
   """
@@ -21,7 +181,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
   """
 
   nPerGyro = dOPS.nPerGyro;
-  #i_save = dOPS.i_save
+  i_save = dOPS.i_save
 
   """
   if isempty(dOPS.event_fcn)
@@ -43,8 +203,8 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
   end
 
   ## Start assigning output variables:
-  #rvt = zeros((7, 1000)) #rv[6,numel(t)] = 0;
-  #rvt[:,1] = [r0v0; 0]
+  rvt = zeros((7, 1000)) #rv[6,numel(t)] = 0;
+  rvt[:,1] = [r0v0; 0]
   
   # Initialize the particle position and velocity:
   r = r0v0[1:3];
@@ -58,7 +218,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
   # Starting time:
   #total_path = 0
   t_running = 0;
-  #i_next = 2;
+  it = 1;
   td_factor = 1 ./ nPerGyro;
   #t = 0:1:600
   mfp_running = 0
@@ -116,6 +276,8 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
     altitude = norm(r) - c.re
     if isnan(densityf(altitude)[1])
       println("Altitude [m]: " * string(altitude))
+      ind = floor(Int, it-1/i_save+1)
+      return rvt[:, ind], 0, 0
       error("Density is nan. Check altitude range")
     end
     lam = sum(cross_sections .* densityf(altitude))
@@ -129,33 +291,35 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMax = [],
 
     #running sum of mfp
     mfp_running = mfp_running + dr_mfp
-    #println(string(i_next))
+    #println(string(it))
     #println(string(t_running))
     #println(string(mfp_running))
     # create t_save parameter
     
-    """
-    if i_next % i_save == 0
-      ind = Int(i_next/i_save)
+    
+    if it-1 % i_save == 0   #it-1 so that first iteration is saved too
+      ind = Int(it-1/i_save)+1
       rvt[:,ind] = [r[:];v[:];t_running]
+      """
       println(string(cross_sections))
       println(string(dr_mfp))
       println(string(Dt))
       println(string(lam))
       println(string(v))
-      println(string(i_next))
+      println(string(it))
       println(string(t_running))
       println(string(mfp_running))
       println(" ")
+      """
       if size(rvt, 2) == ind
         rvt = hcat(rvt, zeros((7, 1000)))
       end
     end
-    """
-    #i_next = i_next+1;
+    
+    it = it+1;
   end
   return r, v, t_running
-  #last_ind = ceil(Int, i_next/i_save)
+  #last_ind = ceil(Int, it/i_save)
   #rvt[:,last_ind] = [r[:];v[:];t_running]
   #println(string(last_ind))
   #return [rvt[:, 1:last_ind], rvt_e, t_running]
