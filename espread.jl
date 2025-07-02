@@ -1,5 +1,7 @@
 using Distributions
 using LinearAlgebra
+using Revise 
+using Random
 
 include("magnetic_field.jl")
 include("constants.jl")
@@ -15,6 +17,9 @@ using GLMakie
 cm = GLMakie
 hist([rand(Exponential(1)) for i in 1:100000], bins=1000)
 """
+
+E0 = 50 #eV
+Random.seed!(E0) # use energy as seed so that runs of the same energy are reproducible
 
 #geomagnetic location of tromso:
 # source https://eiscat.se/scientist/document/location-of-the-eiscat-facilities/
@@ -168,7 +173,16 @@ E_loss = sp_all[idx_scatter, 2]
 sc_f = sp_all[idx_scatter, 6]
 v
 
-out = sc_f(r, v, E_loss)
+for idx_scatter in 1:36
+    E_loss = sp_all[idx_scatter, 2]
+    sc_f = sp_all[idx_scatter, 6]
+    out = sc_f(v, E_loss)
+    println(idx_scatter, out)
+    println(" ") 
+end
+
+
+out = sc_f(v, E_loss)
 if typeof(out) == Vector{Float64}
     v = out
 else
