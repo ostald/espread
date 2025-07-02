@@ -43,6 +43,28 @@ function E_secondary_e_O2(E_primary, E_ionization)
     return p_secondary_e, E_max
 end
 
+function sample_secondary(pdf, E_max)
+    dEs = 0.1
+    Es_lim =  0:dEs:E_max+dEs
+    E_secondary = Es_lim[1:end-1] .+ dEs/2 #evaluate cdf in teh middle of a bin
+    pdf_discrete = pdf(E_secondary)
+    cdf_discrete = cumsum(pdf_discrete) 
+    cdf_discrete = cdf_discrete ./ cdf_discrete[end] #cdf must start from 0
+    sampled_E = E_secondary[findfirst(cdf_discrete .> rand())]
+    return sampled_E
+end
+
+"""
+nsample = Int(1e6)
+pdf, E_max = E_secondary_e_O2(500, 12.8)
+#specify correct binning!
+hist([sample_secondary(pdf, E_max) for _ in 1:nsample],
+    bins = Es_lim #0.5:1:E_max,
+    )
+lines!(E_secondary, pdf_discrete*nsample*dEs)
+display(current_figure())
+"""
+
 """
 # to produce cdf, use fine a fine resolution when evaluating the pdf,
 # use cumsum for simlpe quadrature integration,
