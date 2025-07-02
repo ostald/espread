@@ -25,7 +25,7 @@ function get_scattering_parameters(species_name)
     scat_par[:, 4] = [getfield(Main, f) for f in function_handle] #assign functions from x_cross_sections.jl
     scat_par[:, 5] .= species_name
     
-    """
+    
     if species_name == "N2"
         scat_par[:, 6] .= scatter_inelastic_N2
         scat_par[1, 6]  = scatter_elastic_N2
@@ -39,8 +39,8 @@ function get_scattering_parameters(species_name)
         scat_par[1, 6]  = scatter_elastic_O
         scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_O
     end
+    
     """
-
     if species_name == "N2"
         scat_par[:, 6] .= ["N2", "inelastic"] 
         scat_par[1, 6]  = ["N2", "elastic"]
@@ -54,7 +54,8 @@ function get_scattering_parameters(species_name)
         scat_par[1, 6]  = ["O", "elastic"]
         scat_par[scat_par[:, 3] .> 0, 6] .= ["O", "ionizing"]
     end
-    
+    """
+
     return scat_par
 end
 
@@ -72,6 +73,7 @@ cs_e_O(Ep)  = only.([cs([float(Ep)]) for cs in sp_O[:, 4]])
 # cs_all(Ep) .* [nN2, nO2, nO]
 # be aware of ordering!
 cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep)]
+sp_all = [sp_N2; sp_O2; sp_O]
 
 # summed for total cross section:
 cs_all_sum(Ep) = sum.(cs_all(Ep))

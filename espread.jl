@@ -27,6 +27,8 @@ gc0 = (c.re + 600e3) .* [0, cos(lat_rad), sin(lat_rad)]
 altitude = norm(gc0) - c.re
 
 
+#list of secondary electrons
+secondary_e = []
 #start velocity
 #energy must be larger than 15.6
 E = 10000.0 #eV must be float!
@@ -53,16 +55,33 @@ r0 = gc0 .+ r_n1 .+ r_n2
 v0 = v_n1 .+ v_n2 .+ v_n3
 altitude = norm(r0) - c.re
 
+# r0 is by definition a vector away from the center of earth, i.e. pointing outwards
+# projecting B0 on r0 gives us the orientation of B0 (negative for earthwards, i.e. down)
+B0_proj_r0 = dot(B0, r0)
+# projecting v0 on r0 gives tells us whether the particle is flying up or down (negative for down)
+# but that can be depending on the position of the particle along the gyroradius
+v0_proj_r0 = dot(v0, r0)
+# therefore, first calculate v_par = v proj. on B0,
+# and determine direction of B0 by projecting it on r
+# if the product is negative, v_par is pointing down
+v0_proj_B0 = dot(v0, B0)
+v_par_vec = v0_proj_B0*B0 / norm(B0)^2
+B0_proj_r0 = dot(B0, r0)
+v0_proj_B0 * B0_proj_r0
 
-# plotting start positions, velocity and magnetic fieød
-fig = cm.arrows([Point3f([0, 0, 0])], [Vec3f(B0./norm(B0))], arrowcolor = :red, label = "adf")
+# plotting start positions, velocity and magnetic field
+
+or = [0, 0, 0]
+pp = r0-gc0
+
+fig = arrows3d(Point3(or), Vec3(u3), tipcolor = :red, label = "B/|B|")
+arrows3d!(Point3.([or, or]), Vec3.([u1, u2]))
+
+arrows3d!(Point3(or), Vec3((r_n1 .+ r_n2)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(pp), Vec3((v_n1 .+ v_n2)./1e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(pp), Vec3(v_n3./1e7), tipcolor = :red, tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(pp), Vec3(v0)./1e7, tipcolor = :blue, label = "v", tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
 axislegend()
-cm.arrows!([Point3f([0, 0, 0])], [Vec3f(u1)], arrowcolor = :blue)
-cm.arrows!([Point3f([0, 0, 0])], [Vec3f(u2)], arrowcolor = :green)
-cm.arrows!([Point3f([0, 0, 0])], [Vec3f(r_n1 .+ r_n2)])
-cm.arrows!([Point3f(r_n1 .+ r_n2)], [Vec3f(v_n1 .+ v_n2)./norm(v0)])
-cm.arrows!([Point3f(r_n1 .+ r_n2)], [Vec3f(v0)./norm(v0)])
-display(GLMakie.Screen(), fig)
 
 
 r0v0 = [r0; v0]
@@ -77,8 +96,55 @@ densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc
 
 # sample number of mean free paths travelled:
 n_mfp = rand(Exponential(1))
-r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
+status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
 
+if status == 1
+    nothing
+elseif status == 2
+    #record? do something?
+    println("Particle lost. should we record that?")
+elseif status == 0
+    error("Boris mover failed. Investigate!")
+end
+
+
+"""
+OPS = (trace = true,)
+status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
+rp = r .- r0
+zs = LinRange(0, 3, 200)
+meshscatter([tuple(p...) for p in eachcol(rp[:, 1321001:1321200])], markersize = 1, color = zs)
+
+
+tt = rvt[7, :]
+altitude = [norm(p) - c.re for p in eachcol(r)]
+lines(t, altitude)
+"""
+
+function plot_local_v(r, v, Bin)
+    B0 = Bin(r)
+    u1, u2, u3 = local_orthogonal_basis(B0)
+    v_par = dot(v, u3) * u3
+    v_u1  = dot(v, u1) * u1
+    v_u2  = dot(v, u2) * u2
+    v_perp = v_u1 .+ v_u2
+    r_gyro = c.me * cross(v_perp, B0) / (c.qe * norm(B0)^2)
+    
+    or = [0, 0, 0] #r + r_gyro
+    pp = -r_gyro
+
+    fig = arrows3d(Point3(or), Vec3(u3), tipcolor = :red, label = "B/|B|")
+    arrows3d!(Point3.([or, or]), Vec3.([u1, u2]))
+
+    arrows3d!(Point3(or), Vec3(-r_gyro), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(pp), Vec3((v_u1 .+ v_u2)./1e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(pp), Vec3(v_par./1e7), tipcolor = :red, tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(pp), Vec3(v)./1e7, tipcolor = :blue, label = "v", tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    axislegend()
+    display(current_figure())
+end
+
+plot_local_v(r, v, Bin)
 
 # cumulative sum of cross section * density to decide scattering partner:
 cross_sections = cs_all_sum(E)
@@ -94,8 +160,22 @@ idx_species = findfirst(cumsum(cross_sections .* ns) .> r_scatter)
 ns = densityf(norm(r) - c.re)
 # 
 scatter_p = vcat((cs_all(E) .* ns)...)
-r_scatter = rand(1)[1]*sum(scatter_p)
-idx_scatter = findfirst(cumsum(scatter_p) .> r_scatter)
+r_scatter = rand()
+idx_scatter = findfirst(cumsum(scatter_p) .> r_scatter * sum(scatter_p))
+
+sp_all[idx_scatter, :]
+E_loss = sp_all[idx_scatter, 2]
+sc_f = sp_all[idx_scatter, 6]
+v
+
+out = sc_f(r, v, E_loss)
+if typeof(out) == Vector{Float64}
+    v = out
+else
+    vp_out, vs_out = out
+    v = vp_out
+    secondary_e = record_secondary(r, vs_out, secondary_e)
+end
 
 
 
