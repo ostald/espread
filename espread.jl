@@ -10,55 +10,96 @@ include("ode_boris_mover.jl")
 #load cross sections
 include("cross_sections.jl")
 include("get_msis.jl")
+include("setup.jl")
 
 
-using GLMakie
-"""
-cm = GLMakie
-hist([rand(Exponential(1)) for i in 1:100000], bins=1000)
-"""
+#using GLMakie
 
-E0 = 50 #eV
-Random.seed!(E0) # use energy as seed so that runs of the same energy are reproducible
+n_e_sim = 0
+while n_e_sim < N_electrons
+    ##
+    # initialize new electron
+    
+    # gyrocenter 
+    lat_gmag = loc_gmag[1]
+    gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+    #check altidute
+    @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+    
+    B0 = dipole_field_earth(gc0)
+    #create orthogonal vectorsystem along B0
+    u1, u2, u3 = local_orthogonal_basis(B0)
 
-#geomagnetic location of tromso:
-# source https://eiscat.se/scientist/document/location-of-the-eiscat-facilities/
-loc_gmag = [66.73, 102.18]   # degrees lat, long, geomagnetic coord.
-lat_rad = loc_gmag[1] * pi /180
-loc_geod = [69.58, 19.23]
+    pitch = rand()*lim_pitch    # random pitch angle within limits
+    phase = rand()*2*pi         # random phase angle
 
-#start point: gyrocenter at t= 0
-gc0 = (c.re + 600e3) .* [0, cos(lat_rad), sin(lat_rad)]
-altitude = norm(gc0) - c.re
+    # starting velocity
+    # energy must be float
+    E0 = float(E0)
+    v0_mag = v_abs(E0)           # convert to veloicty => relativistic?
+    v0_par = v0_mag*cos(pitch)   # calculate parallel component
+
+    # for parallel component, find normal vecotors, get random phase, distribute velocity accordingly
+    # velocity vector starts a gyroradius away from gyrocenter
+    v0_perp = sqrt(v0_mag^2 - v0_par^2)
+
+    r0_gyro = c.me * v0_perp / (c.qe * norm(B0))
+
+    # calculate r0 and v0 in n1, n2 directions, and convert to original coordinate system
+    r_n1 =  cos(phase) * r0_gyro .* u1
+    r_n2 =  sin(phase) * r0_gyro .* u2
+    v_n1 = -sin(phase) * v0_perp .* u1
+    v_n2 =  cos(phase) * v0_perp .* u2
+    v_n3 =  v0_par .* u3
+    r0 = gc0 .+ r_n1 .+ r_n2
+    v0 = v_n1 .+ v_n2 .+ v_n3
+
+    # alternatively, the offset from the gyrocenter can be calculated using
+    # the cross product of v0, B0:
+    #r0_2 = gc0 .- c.me * cross(v0, B0) / (c.qe * norm(B0)^2)
+    #r0_2 ≈ r0
+    #   > true
+    #r0 ./ r0_2
+    #   > 3-element Vector{Float64}:
+    #   >   1.0000000000000002
+    #   >   1.0
+    #   >   1.0
+
+    @assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
+
+    # this could be a function, eg. initialize_electron(E0, pitch_lim, lat_gmag, alt0)
+    ##
+
+    propagate_electron(v0, r0)
+   
+    ##
+    n_e_sim = n_e_sim +1
+end
 
 
-#list of secondary electrons
-secondary_e = []
-#start velocity
-#energy must be larger than 15.6
-E = 10000.0 #eV must be float!
-v = v_abs(E)        # convert to veloicty => relativistic?
-pitch = rand()*pi/2         # pitch angle
-v_par  = v*cos(pitch)       # calculate parallel component
-# for parallel component, find normal vecotors, get random phase, distribute velocity accordingly
-# velocity vector starts a gyroradius away from gyrocenter
-# maybe do it the other way around, first declare v0, r0, find gyrocenter after?
-v_perp = sqrt(v^2 - v_par^2)
-B0 = dipole_field_earth(gc0)
-r_gyro = c.me * v_perp / (c.qe * norm(B0))
-#create orthogonal vectorsystem along B0
-u1, u2, u3 = local_orthogonal_basis(B0)
-# phase angle
-phase = rand()*2*pi
-# calculate r0 and v0 in n1, n2 directions, and convert to original coordinate system
-r_n1 =  cos(phase) * r_gyro .* u1
-r_n2 =  sin(phase) * r_gyro .* u2
-v_n1 = -sin(phase) * v_perp .* u1
-v_n2 =  cos(phase) * v_perp .* u2
-v_n3 =  v_par .* u3
-r0 = gc0 .+ r_n1 .+ r_n2
-v0 = v_n1 .+ v_n2 .+ v_n3
-altitude = norm(r0) - c.re
+##
+function propagate_electron(v0, r0)
+    #list of secondary electrons
+    secondary_e = []
+
+    #propagate electron until it runs out of energy to ionize
+    while E_ev(norm(v0)) > 12.072
+        error("notimplemented")
+        #move and scatter
+    end
+
+    # save end point and velocity of parent electron
+    save_result(res_dir, r, v)
+
+    # go through secondary electrons
+    for se in secondary_e
+        r0 = se[1]
+        v0 = se[2]
+        initialize_electron(v0, r0)
+    end
+end
+
+
 
 # r0 is by definition a vector away from the center of earth, i.e. pointing outwards
 # projecting B0 on r0 gives us the orientation of B0 (negative for earthwards, i.e. down)
