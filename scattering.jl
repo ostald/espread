@@ -249,6 +249,34 @@ function scatter_ion_O(v_in, E_ionization)
 end
 
 
+function scatter_doubleion_O(v_in, E_ionization)
+    E_primary = E_ev(norm(v_in))
+    pdf, E_max = E_secondary_e_O(E_primary, E_ionization)
+    Es1_out = sample_secondary(pdf, E_max)
+    Es2_out = sample_secondary(pdf, E_max)
+    #println(string(Es_out/E_primary), "  ", string(Es_out))
+    Ep_out = E_primary - Es_out - E_ionization
+    @assert Ep_out > 0
+    if Es_out > E_primary
+        theta = pi/4
+        phi = rand()*2*pi
+        vp_out = scatter(v_in, Ep_out, theta, phi)
+
+        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+    else
+        #scatter isotrop: primary electron in unchanged
+        vp_out = v_in/norm(v_in) * v_abs(Ep_out)
+        # secondary scatter isotropically
+        direction = randn(Float64, 3)
+        vs_out = direction/norm(direction) * v_abs(Es_out)
+        """
+        nsample = Int(1e4)
+        direction2 = randn(Float64, (nsample, 3))
+        meshscatter([tuple(p...) ./norm(p) for p in eachrow(direction2)], markersize = 0.01)
+        """
+    end
+    return vp_out, vs_out
+end
 
 
 function record_secondary(r, vs_out, secondary_e)
