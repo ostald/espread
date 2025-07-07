@@ -1,8 +1,12 @@
+using Pkg
+Pkg.activate(".")
+
 using Distributions
 using LinearAlgebra
 using Revise 
 using Random
 
+include("energy_secondary_e.jl")
 include("magnetic_field.jl")
 include("constants.jl")
 include("local_ortognal_basis.jl")
@@ -15,8 +19,10 @@ include("setup.jl")
 
 #using GLMakie
 
-n_e_sim = 0
-while n_e_sim < N_electrons
+
+
+
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
     ##
     # initialize new electron
     
@@ -67,40 +73,148 @@ while n_e_sim < N_electrons
 
     @assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
 
-    # this could be a function, eg. initialize_electron(E0, pitch_lim, lat_gmag, alt0)
-    ##
+    return r0, v0
+end
+    
 
-    propagate_electron(v0, r0)
-   
-    ##
-    n_e_sim = n_e_sim +1
+function save_endpoint(res_dir, status, r, v)
+    open(joinpath(res_dir, "results.txt"), "w") do file
+        write(file, status, r, v)
+    end
 end
 
 
 ##
-function propagate_electron(v0, r0)
+function propagate_electron(v0, r0, densityf, res_dir)
     #list of secondary electrons
     secondary_e = []
+    
+    v = v0
+    r = r0
+    E = E_ev(norm(v))
+    status = -1 #undef
 
     #propagate electron until it runs out of energy to ionize
-    while E_ev(norm(v0)) > 12.072
-        error("notimplemented")
-        #move and scatter
+    while E > 12.072
+        r0v0 = [r; v]
+        #magnetic field handle for boris mover: (static field)
+        Bin(p) = dipole_field_earth(p)
+        # sample number of mean free paths travelled:
+        n_mfp = rand(Exponential())
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
+        E = E_ev(norm(v))
+
+        if status == 1
+            nothing
+        elseif status == 2
+            #record? do something?
+            println("Particle lost, recorded.\n")
+            save_endpoint(res_dir, status, r, v) #save status too?
+            break
+            #alternatively, check in while statement if state != 2
+        elseif status == 0
+            error("Boris mover failed. Investigate!")
+        else 
+            pritnln("status :", status)
+            error("This should not happen. Investigate!")
+        end
+        
+        #plot_local_v(r, v, Bin)
+
+        ##
+        # after moving electron, scatter:
+
+        # use cross sections of all scatter processes directly, not summed for each species
+        # thereby one random number decides directly which scattering process is triggered
+        ns = densityf(altitude(r))
+        scatter_p = vcat((cs_all(E) .* ns)...)
+        idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
+
+        print("           Scattering Process = ", sp_all[idx_scatter, 1], 
+            "\n                       E_loss = ", sp_all[idx_scatter, 2], 
+            "\n                Ions Produced = ", sp_all[idx_scatter, 3], 
+            #"\nCross Section function handle = ", sp_all[idx_scatter, 4], 
+            "\n           Scattering Partner = ", sp_all[idx_scatter, 5], 
+            "\n   Scattering function handle = ", sp_all[idx_scatter, 6],
+            "\n\n")
+
+        # all scatterign functions have the same input:
+        # v_in, E_loss
+        # get paramters for scattering:
+        E_loss = sp_all[idx_scatter, 2]
+        sc_f   = sp_all[idx_scatter, 6]
+        # scatter:
+        out = sc_f(v, E_loss)
+
+        """
+        # testing all scattering functions:
+        for idx_scatter in 1:63
+            E_loss = sp_all[idx_scatter, 2]
+            sc_f = sp_all[idx_scatter, 6]
+            out = sc_f(v, E_loss)
+            println(idx_scatter, out)
+            println(" ") 
+        end
+        """
+
+        if sp_all[idx_scatter, 3] == 0 #non-ionising collisions
+        #if typeof(out) == Vector{Float64}
+            v = out
+        elseif sp_all[idx_scatter, 3] == 1 #ionising collisions
+            vp_out, vs_out = out
+            v = vp_out
+            secondary_e = record_secondary(r, vs_out, secondary_e)
+        else #double-ionising collisions
+            vp_out, vs1_out, vs2_out = out
+            v = vp_out
+            secondary_e = record_secondary(r, vs1_out, secondary_e)
+            secondary_e = record_secondary(r, vs2_out, secondary_e)
+        end
+
+        #update energy after collision!
+        E = E_ev(norm(v))
+
     end
 
     # save end point and velocity of parent electron
-    save_result(res_dir, r, v)
+    save_endpoint(res_dir, status, r, v) #save status too?
 
     # go through secondary electrons
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        initialize_electron(v0, r0)
+        propagate_electron(v0, r0, densityf, res_dir)
     end
 end
 
 
 
+function main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
+
+    hmsis = 80e3:1e3:alt0+1e4 #km
+    densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
+
+    n_e_sim = 0
+    while n_e_sim < N_electrons
+        
+        println("Electorn number: ", n_e_sim)
+
+        r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+        
+        ##
+        propagate_electron(v0, r0, densityf, res_dir)
+        
+        ##
+        n_e_sim = n_e_sim +1
+    end
+end
+
+
+main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
+
+
+
+"""
 # r0 is by definition a vector away from the center of earth, i.e. pointing outwards
 # projecting B0 on r0 gives us the orientation of B0 (negative for earthwards, i.e. down)
 B0_proj_r0 = dot(B0, r0)
@@ -128,30 +242,7 @@ arrows3d!(Point3(pp), Vec3((v_n1 .+ v_n2)./1e7), tipradius = 0.034, tiplength = 
 arrows3d!(Point3(pp), Vec3(v_n3./1e7), tipcolor = :red, tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
 arrows3d!(Point3(pp), Vec3(v0)./1e7, tipcolor = :blue, label = "v", tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
 axislegend()
-
-
-r0v0 = [r0; v0]
-#magnetic field handle for boris mover: (static field)
-Bin(p) = dipole_field_earth(p)
-
-#mean free path calculations
-#msis altitude resolution could be coarser??
-hmsis = 80e3:1e3:700e3 #km
-densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
-
-
-# sample number of mean free paths travelled:
-n_mfp = rand(Exponential(1))
-status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
-
-if status == 1
-    nothing
-elseif status == 2
-    #record? do something?
-    println("Particle lost. should we record that?")
-elseif status == 0
-    error("Boris mover failed. Investigate!")
-end
+"""
 
 
 """
@@ -167,6 +258,8 @@ altitude = [norm(p) - c.re for p in eachcol(r)]
 lines(t, altitude)
 """
 
+
+"""
 function plot_local_v(r, v, Bin)
     B0 = Bin(r)
     u1, u2, u3 = local_orthogonal_basis(B0)
@@ -191,47 +284,17 @@ function plot_local_v(r, v, Bin)
 end
 
 plot_local_v(r, v, Bin)
+"""
 
+"""
 # cumulative sum of cross section * density to decide scattering partner:
 cross_sections = cs_all_sum(E)
-ns = densityf(norm(r) - c.re)
+ns = densityf(altitude(r))
 # sample uniformly between scattering partners:
-r_scatter = rand(1)[1]*sum(cross_sections .* ns)
+r_scatter = rand()*sum(cross_sections .* ns)
 #species index: according to densityf [N2, O2, O]
 idx_species = findfirst(cumsum(cross_sections .* ns) .> r_scatter)
-
-
-# alternatively, use cross sections of ionization processes directly, not summed for each species
-# thereby one radnom number decides directly which scattering process is triggered
-ns = densityf(norm(r) - c.re)
-# 
-scatter_p = vcat((cs_all(E) .* ns)...)
-r_scatter = rand()
-idx_scatter = findfirst(cumsum(scatter_p) .> r_scatter * sum(scatter_p))
-
-sp_all[idx_scatter, :]
-E_loss = sp_all[idx_scatter, 2]
-sc_f = sp_all[idx_scatter, 6]
-v
-
-for idx_scatter in 1:36
-    E_loss = sp_all[idx_scatter, 2]
-    sc_f = sp_all[idx_scatter, 6]
-    out = sc_f(v, E_loss)
-    println(idx_scatter, out)
-    println(" ") 
-end
-
-
-out = sc_f(v, E_loss)
-if typeof(out) == Vector{Float64}
-    v = out
-else
-    vp_out, vs_out = out
-    v = vp_out
-    secondary_e = record_secondary(r, vs_out, secondary_e)
-end
-
+"""
 
 
 """
@@ -241,17 +304,4 @@ hist([findfirst(cumsum(scatter_p) .> r_scatter) for r_scatter in rand(nsample).*
     scale_to=scatter_p[1]
     )
 """
-
-# scattering:
-# scattering phase is uniform:
-scatter_phase = rand(1)*2*pi
-# scattering angle along flightpath:
-# depends on secondary electron eenergy
-include("energy_secondary_e.jl")
-# there is a lower bound on the E_secondary, given by the resolution (usually 0.1 eV)
-# could be resolved by first selectong E_secondary bin, and assume an even distribution within the bin,
-# and select the exact E_secondary by second random number.
-
-#do collision:
-#1. decide which particle: sum densities, normalize,
 
