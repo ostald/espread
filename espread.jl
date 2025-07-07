@@ -78,8 +78,8 @@ end
     
 
 function save_endpoint(res_dir, status, r, v)
-    open(joinpath(res_dir, "results.txt"), "w") do file
-        write(file, status, r, v)
+    open(joinpath(res_dir, "results.txt"), "a") do file
+        write(file, "$status, $r, $v\n")
     end
 end
 
@@ -197,7 +197,7 @@ function main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
     n_e_sim = 0
     while n_e_sim < N_electrons
         
-        println("Electorn number: ", n_e_sim)
+        println("Electron number: ", n_e_sim)
 
         r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
         
