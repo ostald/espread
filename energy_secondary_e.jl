@@ -150,7 +150,7 @@ function E_secondary_e_O(E_primary, E_ionization)
     end
     
     E_max = (E_primary - E_ionization)/2
-    ps(Es) = B ./(1 .+(Es ./A).^(5/3))
+    ps(Es) = 1 ./(1 .+(Es ./A).^(5/3))
     
     #normalization
     #trapeziodal integration: see https://se.mathworks.com/help/matlab/ref/trapz.html#bua4lsr
