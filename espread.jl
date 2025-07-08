@@ -20,8 +20,6 @@ include("setup.jl")
 #using GLMakie
 
 
-
-
 function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
     ##
     # initialize new electron
@@ -77,9 +75,9 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
 end
     
 
-function save_endpoint(res_dir, status, r, v)
+function save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
     open(joinpath(res_dir, "results.txt"), "a") do file
-        write(file, "$status, $r, $v\n")
+        write(file, "$r0\t$v0\t$status\t$r\t$v\n")
     end
 end
 
@@ -109,7 +107,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
         elseif status == 2
             #record? do something?
             println("Particle lost, recorded.\n")
-            save_endpoint(res_dir, status, r, v) #save status too?
+            save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
             break
             #alternatively, check in while statement if state != 2
         elseif status == 0
@@ -130,6 +128,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
         scatter_p = vcat((cs_all(E) .* ns)...)
         idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
 
+        """
         print("           Scattering Process = ", sp_all[idx_scatter, 1], 
             "\n                       E_loss = ", sp_all[idx_scatter, 2], 
             "\n                Ions Produced = ", sp_all[idx_scatter, 3], 
@@ -137,6 +136,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
             "\n           Scattering Partner = ", sp_all[idx_scatter, 5], 
             "\n   Scattering function handle = ", sp_all[idx_scatter, 6],
             "\n\n")
+        """
 
         # all scatterign functions have the same input:
         # v_in, E_loss
@@ -144,8 +144,13 @@ function propagate_electron(v0, r0, densityf, res_dir)
         E_loss = sp_all[idx_scatter, 2]
         sc_f   = sp_all[idx_scatter, 6]
         # scatter:
-        out = sc_f(v, E_loss)
-
+        out = 0
+        try
+            out = sc_f(v, E_loss)
+        catch
+            print(r, v, idx_scatter)
+            error("boom")
+        end
         """
         # testing all scattering functions:
         for idx_scatter in 1:63
@@ -160,15 +165,15 @@ function propagate_electron(v0, r0, densityf, res_dir)
         if sp_all[idx_scatter, 3] == 0 #non-ionising collisions
         #if typeof(out) == Vector{Float64}
             v = out
-        elseif sp_all[idx_scatter, 3] == 1 #ionising collisions
+        else #elseif sp_all[idx_scatter, 3] == 1 #ionising collisions
             vp_out, vs_out = out
             v = vp_out
             secondary_e = record_secondary(r, vs_out, secondary_e)
-        else #double-ionising collisions
-            vp_out, vs1_out, vs2_out = out
-            v = vp_out
-            secondary_e = record_secondary(r, vs1_out, secondary_e)
-            secondary_e = record_secondary(r, vs2_out, secondary_e)
+        #else #double-ionising collisions not permitted as of now
+        #    vp_out, vs1_out, vs2_out = out
+        #    v = vp_out
+        #    secondary_e = record_secondary(r, vs1_out, secondary_e)
+        #    secondary_e = record_secondary(r, vs2_out, secondary_e)
         end
 
         #update energy after collision!
@@ -177,7 +182,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
     end
 
     # save end point and velocity of parent electron
-    save_endpoint(res_dir, status, r, v) #save status too?
+    save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
 
     # go through secondary electrons
     for se in secondary_e
@@ -195,17 +200,16 @@ function main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
     densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
     n_e_sim = 0
+    
     while n_e_sim < N_electrons
-        
         println("Electron number: ", n_e_sim)
-
-        r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
-        
-        ##
-        propagate_electron(v0, r0, densityf, res_dir)
-        
-        ##
-        n_e_sim = n_e_sim +1
+        try
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+            propagate_electron(v0, r0, densityf, res_dir)
+            n_e_sim = n_e_sim +1
+        catch
+            println("re-initiating electron")
+        end
     end
 end
 
