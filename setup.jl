@@ -3,7 +3,7 @@
 using Dates
 
 # Define initial energy
-E0 = 50 #eV
+E0 = 500 #eV
 
 # Define number of particles
 N_electrons = 1e2

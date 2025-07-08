@@ -248,7 +248,10 @@ function scatter_ion_O(v_in, E_ionization)
     return vp_out, vs_out
 end
 
-
+#still needs some work!
+# ask Simon Wedlund
+# see Chengjun LI: Experimental study on electron impact double ionization dynamics for atomic
+# and small molecular targets at intermediate incident energy
 function scatter_doubleion_O(v_in, E_ionization)
     E_primary = E_ev(norm(v_in))
     pdf, E_max = E_secondary_e_O(E_primary, E_ionization)
