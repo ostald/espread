@@ -7,14 +7,20 @@ function E_secondary_e_N2(E_primary, E_ionization)
     # see Opal et al 1972
     E_hat = 11.4  #eV
     E_max = (E_primary - E_ionization)/2
-    ps(Es) = 1/(Es^2 + E_hat^2)
+    ps(Es) = 1 ./(Es.^2 .+ E_hat.^2)
     #normalization
     #trapeziodal integration: see https://se.mathworks.com/help/matlab/ref/trapz.html#bua4lsr
     # N+1 evenly spaced points, with N intervals inbetween
     # int_a^b f(x) dx ≈ (b-a)/2N * (f(x1) + 2f(x2) + ... + 2f(xN) + f(xN+1))
-    ee = LinRange(0, E_max, Int(ceil(E_max))) # array [0, E_max] with approx 1eV steps
+    ee = LinRange(0, E_max, max(4, Int(ceil(E_max)))) # array [0, E_max] with approx 1eV steps
     n_ee = length(ee)-1
-    int = E_max * (sum(ps.(ee)) + sum(ps.(ee[2:end-1]))) / 2 / n_ee
+    int = 0
+    try
+        int = E_max * (sum(ps(ee)) + sum(ps(ee[2:end-1]))) / 2 / n_ee
+    catch
+        println("E_secondary_e_N2($E_primary, $E_ionization)")
+        error("boom")
+    end
     normalization_factor = 1/int 
     p_secondary_e(E_secondary) = normalization_factor ./ (E_hat^2 .+ E_secondary.^2) .* (E_secondary .< E_max)
 
@@ -29,14 +35,20 @@ function E_secondary_e_O2(E_primary, E_ionization)
     # see Opal et al 1972
     E_hat = 15.2 #eV
     E_max = (E_primary - E_ionization)/2
-    ps(Es) = 1/(Es^2 + E_hat^2)
+    ps(Es) = 1 ./(Es.^2 .+ E_hat.^2)
     #normalization
     #trapeziodal integration: see https://se.mathworks.com/help/matlab/ref/trapz.html#bua4lsr
     # N+1 evenly spaced points, with N intervals inbetween
     # int_a^b f(x) dx ≈ (b-a)/2N * (f(x1) + 2f(x2) + ... + 2f(xN) + f(xN+1))
-    ee = LinRange(0, E_max, Int(ceil(E_max)))
+    ee = LinRange(0, E_max, max(4, Int(ceil(E_max))))
     n_ee = length(ee)-1
-    int = E_max * (sum(ps.(ee)) + sum(ps.(ee[2:end-1]))) / 2 / n_ee
+    int = 0
+    try
+        int = E_max * (sum(ps(ee)) + sum(ps(ee[2:end-1]))) / 2 / n_ee
+    catch
+        println("E_secondary_e_O2($E_primary, $E_ionization)")
+        error("boom")
+    end
     normalization_factor = 1/int 
     p_secondary_e(E_secondary) = normalization_factor ./ (E_hat^2 .+ E_secondary.^2) .* (E_secondary .< E_max)
 
@@ -156,9 +168,16 @@ function E_secondary_e_O(E_primary, E_ionization)
     #trapeziodal integration: see https://se.mathworks.com/help/matlab/ref/trapz.html#bua4lsr
     # N+1 evenly spaced points, with N intervals inbetween
     # int_a^b f(x) dx ≈ (b-a)/2N * (f(x1) + 2f(x2) + ... + 2f(xN) + f(xN+1))
-    ee = LinRange(0, E_max, Int(ceil(E_max)))
+    ee = LinRange(0, E_max, max(4, Int(ceil(E_max))))
     n_ee = length(ee)-1
-    int = E_max * (sum(ps.(ee)) + sum(ps.(ee[2:end-1]))) / 2 / n_ee
+    int = 0
+    try
+        int = E_max * (sum(ps(ee)) + sum(ps(ee[2:end-1]))) / 2 / n_ee
+    catch
+        println("E_secondary_e_O($E_primary, $E_ionization)")
+        error("boom")
+    end
+
     normalization_factor = 1/int 
     
     p_secondary_e(E_secondary) = normalization_factor .* ps.(E_secondary) .* (E_secondary .< E_max)
