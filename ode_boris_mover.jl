@@ -34,7 +34,8 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
   max_altitude = dOPS.max_altitude
 
   if max_altitude == []
-    max_altitude = densityf.nN2_ip.heights[end]
+    #max_altitude = densityf.nN2_ip.heights[end]
+    max_altitude = 61e4
   end
 
   if trace
