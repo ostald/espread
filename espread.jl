@@ -194,28 +194,65 @@ end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
+function main(E0, N_electrons, alt0, lim_pitch, loc_gmag, loc_geod)
+    seed_value = round(Int, E0 + lim_pitch*100)
+    Random.seed!(seed_value)
 
-    hmsis = 80e3:1e3:alt0+1e4 #km
-    densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
-
-    n_e_sim = 0
-    
-    while n_e_sim < N_electrons
-        println("Electron number: ", n_e_sim)
-        try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
-            propagate_electron(v0, r0, densityf, res_dir)
-            n_e_sim = n_e_sim +1
-        catch
-            println("re-initiating electron")
-        end
+    # Results directory
+    res_dir = joinpath("results", "res_$(E0)eV_$(lim_pitch_deg)deg_" * string(now()))
+    mkdir(res_dir)
+    open(joinpath(res_dir, "results.txt"), "w") do file
+        write(file, "E0 = $E0\n")
+        write(file, "pitch limit = $lim_pitch_deg\n")
+        write(file, "Seed = $seed_value\n\n")
     end
+    
+    hmin = 80e3     #m
+    hmax = alt0+1e4 #m
+    intervals = 1e3 #m
+    hmsis = hmin:intervals:hmax
+    atm = atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
+    densityf_fast(alt) = atm[round(Int, (alt-hmin)/intervals+1), :]
+    #stack(densityf_fast.(hmsis))' == atm
+    #    > true
+
+    #hmsis = 80e3:1e3: #km
+    #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
+
+    
+    n_e_sim = 1
+    
+    while n_e_sim <= N_electrons
+        println("Electron number: ", n_e_sim)
+        #try
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+            propagate_electron(v0, r0, densityf_fast, res_dir)
+            n_e_sim = n_e_sim +1
+        #catch
+        #    println("re-initiating electron")
+        #end
+    end
+    return nothing
 end
 
+E0 = 4000 #eV
+@time main(Int(E0), 10, alt0, lim_pitch, loc_gmag, loc_geod)
+"""
+using Distributed
+procs = addprocs(2)
 
-main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
+@everywhere procs begin Base.MainInclude.eval(include("espread.jl")) end
+f = @spawnat 2  main(E0, 2, alt0, lim_pitch, loc_gmag, loc_geod)
+ff = fetch(f)
 
+
+for E0 in e_energy
+    for lim_pitch_deg in pitch_limits
+        lim_pitch = lim_pitch_deg/180*pi
+        main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
+    end
+end
+"""
 
 
 """
