@@ -3,28 +3,23 @@
 using Dates
 
 # Define initial energy
-E0 = 500 #eV
+#E0 = 4000 #eV
+e_energy = [500, 1e4, 2e4, 4e4, 8e4]
 
 # Define number of particles
-N_electrons = 1e2
+N_electrons = 1000
 
 # starting altitude
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-lim_pitch_deg = 90 #deg
-lim_pitch = 90/180*pi
+lim_pitch_deg = 10 #deg
+lim_pitch = lim_pitch_deg/180*pi
+
+pitch_limits = [20, 90]
 
 # initiate seed
-Random.seed!(Int(E0)) # use energy as seed so that runs of the same energy are reproducible
-
-
-# Results directory
-res_dir = joinpath("results", string(now()))
-mkdir(res_dir)
-open(joinpath(res_dir, "results.txt"), "w") do file
-    write(file, "Seed = $E0\n\n")
-end
+#Random.seed!(Int(E0)) # use energy as seed so that runs of the same energy are reproducible
 
 
 #geomagnetic location of tromso:
@@ -34,7 +29,6 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
-
 
 
 
