@@ -46,6 +46,14 @@ function atmospheric_model(times, heights, lats, longs)
     """
 end
 
+
+function atmospheric_model_fast(times, heights, lats, longs)
+    atm_matrix = msis(times, heights, lats, longs)[:]
+    nN2 = [a.N2_number_density for a in atm_matrix]
+    nO2 = [a.O2_number_density for a in atm_matrix]
+    nO  = [a.O_number_density  for a in atm_matrix]
+    return stack([nN2, nO2, nO])
+end
 """
 function consolidate_msis(atm)
     #function to consolidate results of msis() when called with lists as inputs
