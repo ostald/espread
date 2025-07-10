@@ -56,13 +56,19 @@ function E_secondary_e_O2(E_primary, E_ionization)
 end
 
 function sample_secondary(pdf, E_max)
-    dEs = 0.1
+    dEs = min(0.1, E_max/5)
     Es_lim =  0:dEs:E_max+dEs
     E_secondary = Es_lim[1:end-1] .+ dEs/2 #evaluate cdf in teh middle of a bin
     pdf_discrete = pdf(E_secondary)
-    cdf_discrete = cumsum(pdf_discrete) 
+    cdf_discrete = [0; cumsum(pdf_discrete)]
     cdf_discrete = cdf_discrete ./ cdf_discrete[end] #cdf must start from 0
-    sampled_E = E_secondary[findfirst(cdf_discrete .> rand())]
+    #interpolate
+    r = rand()
+    ind_upper = findfirst(cdf_discrete .> r)
+    ind_lower = ind_upper -1
+    slope = (Es_lim[ind_upper] - Es_lim[ind_lower]) / (cdf_discrete[ind_upper] - cdf_discrete[ind_lower])
+    sampled_E = Es_lim[ind_lower] + slope*(r-cdf_discrete[ind_lower])
+    #sampled_E = E_secondary[findfirst(cdf_discrete .> r)]
     return sampled_E
 end
 
