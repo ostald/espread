@@ -224,19 +224,19 @@ function main(E0, N_electrons, alt0, lim_pitch, loc_gmag, loc_geod)
     
     while n_e_sim <= N_electrons
         println("Electron number: ", n_e_sim)
-        #try
+        try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
             propagate_electron(v0, r0, densityf_fast, res_dir)
             n_e_sim = n_e_sim +1
-        #catch
-        #    println("re-initiating electron")
-        #end
+        catch
+            println("re-initiating electron")
+        end
     end
     return nothing
 end
 
-E0 = 4000 #eV
-@time main(Int(E0), 10, alt0, lim_pitch, loc_gmag, loc_geod)
+#E0 = 4000 #eV
+#@time main(Int(E0), 10, alt0, lim_pitch, loc_gmag, loc_geod)
 """
 using Distributed
 procs = addprocs(2)
