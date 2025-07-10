@@ -9,11 +9,15 @@ procs = addprocs(10)
 #f = @spawnat 2  main(4000, 2, alt0, 20, loc_gmag, loc_geod)
 #ff = fetch(f)
 
-i = 2
-for E0 in e_energy
-    for lim_pitch_deg in pitch_limits
-        lim_pitch = lim_pitch_deg/180*pi
-        f = @spawnat i main(Int(E0), N_electrons, alt0, lim_pitch, loc_gmag, loc_geod)
-        i = i+1
-    end
-end
+f2  = @spawnat 2  main( 500, N_electrons, alt0, 20, loc_gmag, loc_geod)
+f3  = @spawnat 3  main( 500, N_electrons, alt0, 90, loc_gmag, loc_geod)
+f4  = @spawnat 4  main(1000, N_electrons, alt0, 20, loc_gmag, loc_geod)
+f5  = @spawnat 5  main(1000, N_electrons, alt0, 90, loc_gmag, loc_geod)
+f6  = @spawnat 6  main(2000, N_electrons, alt0, 20, loc_gmag, loc_geod)
+f7  = @spawnat 7  main(2000, N_electrons, alt0, 90, loc_gmag, loc_geod)
+f8  = @spawnat 8  main(4000, N_electrons, alt0, 20, loc_gmag, loc_geod)
+f9  = @spawnat 9  main(4000, N_electrons, alt0, 90, loc_gmag, loc_geod)
+f10 = @spawnat 10 main(8000, N_electrons, alt0, 20, loc_gmag, loc_geod)
+f11 = @spawnat 11 main(8000, N_electrons, alt0, 90, loc_gmag, loc_geod)
+
+

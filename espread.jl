@@ -194,7 +194,9 @@ end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch, loc_gmag, loc_geod)
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod)
+    lim_pitch = lim_pitch_deg/180*pi
+    
     seed_value = round(Int, E0 + lim_pitch*100)
     Random.seed!(seed_value)
 
