@@ -21,3 +21,11 @@ f10 = @spawnat 10 main(8000, N_electrons, alt0, 20, loc_gmag, loc_geod)
 f11 = @spawnat 11 main(8000, N_electrons, alt0, 90, loc_gmag, loc_geod)
 
 
+i = 2
+for E0 in e_energy
+    for pl in pitch_limits_deg
+        @spawnat i  main(E0, N_electrons, alt0, pl, loc_gmag, loc_geod)
+        i = i+1
+        break
+    end
+end
