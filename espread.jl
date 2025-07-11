@@ -20,7 +20,7 @@ include("setup.jl")
 #using GLMakie
 
 
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     ##
     # initialize new electron
     
@@ -28,7 +28,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
     lat_gmag = loc_gmag[1]
     gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
     #check altidute
-    @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+    @assert abs(alt0 - altitude(gc0, c)) < 10 #m        10m within target altitude is ok.
     
     B0 = dipole_field_earth(gc0)
     #create orthogonal vectorsystem along B0
@@ -40,7 +40,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
     # starting velocity
     # energy must be float
     E0 = float(E0)
-    v0_mag = v_abs(E0)           # convert to veloicty => relativistic?
+    v0_mag = v_abs(E0, c)           # convert to veloicty => relativistic?
     v0_par = v0_mag*cos(pitch)   # calculate parallel component
 
     # for parallel component, find normal vecotors, get random phase, distribute velocity accordingly
@@ -69,7 +69,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
     #   >   1.0
     #   >   1.0
 
-    @assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
+    @assert abs(alt0 - altitude(r0, c)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
 
     return r0, v0
 end
@@ -83,24 +83,24 @@ end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_dir)
+function propagate_electron(v0, r0, densityf, res_dir, c)
     #list of secondary electrons
     secondary_e = []
     
     v = v0
     r = r0
-    E = E_ev(norm(v))
+    E = E_ev(norm(v), c)
     status = -1 #undef
 
     #propagate electron until it runs out of energy to ionize
     while E > 12.072
         r0v0 = [r; v]
         #magnetic field handle for boris mover: (static field)
-        Bin(p) = dipole_field_earth(p)
+        Bin!(B, p) = dipole_field_earth!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
-        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
-        E = E_ev(norm(v))
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, c)
+        E = E_ev(norm(v), c)
 
         if status == 1
             nothing
@@ -124,7 +124,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
 
         # use cross sections of all scatter processes directly, not summed for each species
         # thereby one random number decides directly which scattering process is triggered
-        ns = densityf(altitude(r))
+        ns = densityf(altitude(r, c))
         scatter_p = vcat((cs_all(E) .* ns)...)
         idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
 
@@ -143,12 +143,21 @@ function propagate_electron(v0, r0, densityf, res_dir)
         # get paramters for scattering:
         E_loss = sp_all[idx_scatter, 2]
         sc_f   = sp_all[idx_scatter, 6]
+
+        #ensure E_loss is not bigger than the kinetic energy
+        while E_loss > E_ev(norm(v), c)
+            idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
+            E_loss = sp_all[idx_scatter, 2]
+            sc_f   = sp_all[idx_scatter, 6]
+        end
+
         # scatter:
         out = 0
         try
             out = sc_f(v, E_loss)
         catch
-            print(r, v, idx_scatter)
+            print("r = ", r,"; v = ", v, "; idx_scatter = ", idx_scatter, "\n")
+            print("Ekin - E_loss = ", E_ev(norm(v), c) - E_loss)
             error("boom")
         end
         """
@@ -177,7 +186,7 @@ function propagate_electron(v0, r0, densityf, res_dir)
         end
 
         #update energy after collision!
-        E = E_ev(norm(v))
+        E = E_ev(norm(v), c)
 
     end
 
@@ -188,16 +197,22 @@ function propagate_electron(v0, r0, densityf, res_dir)
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_dir)
+        propagate_electron(v0, r0, densityf, res_dir, c)
     end
 end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod)
-    lim_pitch = lim_pitch_deg/180*pi
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
+
+    # make sure all values are floats
+    E0 = Float64(E0)
+    alt0 = Float64(alt0)
+    lim_pitch_deg = Float64(lim_pitch_deg)
+    loc_gmag = Float64.(loc_gmag)
+    loc_geod = Float64.(loc_geod)
     
-    seed_value = round(Int, E0 + lim_pitch*100)
+    seed_value = round(Int, E0 + lim_pitch_deg)
     Random.seed!(seed_value)
 
     # Results directory
@@ -209,36 +224,40 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod)
         write(file, "Seed = $seed_value\n\n")
     end
     
-    hmin = 80e3     #m
-    hmax = alt0+1e4 #m
-    intervals = 1e3 #m
-    hmsis = hmin:intervals:hmax
-    atm = atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
-    densityf_fast(alt) = atm[round(Int, (alt-hmin)/intervals+1), :]
+    function make_densityf()
+        hmin = 80e3     #m
+        hmax = alt0+1e4 #m
+        intervals = 1e3 #m
+        hmsis = hmin:intervals:hmax
+        atm = Float64.(atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2]))
+        return densityf_fast(alt) = atm[round(Int, (alt-hmin)/intervals+1), :]
+    end
+    densityf = make_densityf()
     #stack(densityf_fast.(hmsis))' == atm
     #    > true
 
     #hmsis = 80e3:1e3: #km
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
-    
+    lim_pitch = lim_pitch_deg/180*pi
+
     n_e_sim = 1
     
     while n_e_sim <= N_electrons
         println("Electron number: ", n_e_sim)
-        try
+        #try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
-            propagate_electron(v0, r0, densityf_fast, res_dir)
+            propagate_electron(v0, r0, densityf, res_dir, c)
             n_e_sim = n_e_sim +1
-        catch
-            println("re-initiating electron")
-        end
+        #catch
+        #    println("re-initiating electron")
+        #end
     end
     return nothing
 end
 
 #E0 = 4000 #eV
-#@time main(Int(E0), 10, alt0, lim_pitch, loc_gmag, loc_geod)
+#@time main(Int(E0), 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
 """
 using Distributed
 procs = addprocs(2)
