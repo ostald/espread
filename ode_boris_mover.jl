@@ -2,7 +2,7 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf, c)#; OPS = [])
   # returns:
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
@@ -15,28 +15,34 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
   #   - include ionization cross sections of N2, O2, O and densities for mean free path calculations
   #   - removed electric field
 
-  dOPS = (nPerGyro = 20,
-          wMax = 0,
-          max_altitude = [],
-          trace = false,
-          i_save = 1 #save every 191st iteration 
-          );
+  #dOPS = (nPerGyro = 20,
+  #        wMax = 0,
+  #        max_altitude = [],
+  #        trace = false,
+  #        i_save = 1 #save every 191st iteration 
+  #        );
 
   
-  if OPS != [] #if nargin > 7
-    dOPS = (; dOPS..., OPS...) #merge_structs(dOPS,OPS);
-  end
+  #if OPS != [] #if nargin > 7
+  #  dOPS = (; dOPS..., OPS...) #merge_structs(dOPS,OPS);
+  #end
 
-  nPerGyro = dOPS.nPerGyro;
-  wMax = dOPS.wMax;
-  trace = dOPS.trace;
-  i_save = dOPS.i_save;
-  max_altitude = dOPS.max_altitude
+  #nPerGyro = dOPS.nPerGyro;
+  #wMax = dOPS.wMax;
+  #trace = dOPS.trace;
+  #i_save = dOPS.i_save;
+  #max_altitude = dOPS.max_altitude
 
-  if max_altitude == []
+  nPerGyro = 20;
+  wMax = 0;
+  trace = false;
+  i_save = 1;
+  max_altitude = 61e4;
+
+  #if max_altitude == []
     #max_altitude = densityf.nN2_ip.heights[end]
-    max_altitude = 61e4
-  end
+  #  max_altitude = 61e4
+  #end
 
   if trace
     ## Start assigning tracing variables:
@@ -50,18 +56,20 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
   v = r0v0[4:6];
   #r = rvt[1:3,1];
   #v = rvt[4:6,1];
-  Ekin = E_ev(norm(v))
+  Ekin = E_ev(norm(v), c)
   cross_sections = sigma(Ekin)
 
 
   # Starting time:
   #total_path = 0
-  t_running = 0;
+  t_running = zero(Float64)
   td_factor = 1 ./ nPerGyro;
-  mfp_running = 0
+  mfp_running = zero(Float64)
+
+  B = zeros(3)
 
   while mfp_running < n_mfp
-    B = Bin(r);
+    Bin!(B, r);
 
     ## Update the increment in time
     #  to ensure nice trajectories along the track use 1 20th (or
@@ -111,8 +119,8 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
     #total_path = total_path + norm(v)*Dt;
 
     # local mean freep path:
-    altitude = norm(r) - c.re
-    if altitude > max_altitude
+    alt = altitude(r, c)
+    if alt > max_altitude
       # dot(v, B) projects v on B, yielding v_par*norm(B)
       # this gets rid of v_perp
       # dot(B, r) projects B in r. r is by definition outwards, i.e. sign(dot(B, r)) < 0 for inward pointing B
@@ -128,21 +136,22 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin, sigma, densityf; OPS = [])
         end
       else
         println("Altitude over maximum, velocity invards.")
-        println("Altitude [m]: " * string(altitude))
+        println("Altitude [m]: " * string(alt))
         if trace
           # if tracing is on, return state 0 (failure) and trace (rvt)
           ind = Int(it_current/i_save)+1
           return 0, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
         else
+          error("Altitude over maximum, velocity invards.")
           #if trace is off, verify if altitude is in interpolation range
-          @assert altitude < densityf.nN2_ip.heights[end]
+          #@assert alt < densityf.nN2_ip.heights[end]
         end
       end
     end
     
     #local mean free path:
-    #mfp = 1/sum(cross_sections .* densityf(altitude))
-    lam = sum(cross_sections .* densityf(altitude))
+    #mfp = 1/sum(cross_sections .* densityf(alt))
+    lam = sum(cross_sections .* densityf(alt))
     @assert !isnan(lam)    
 
     #path travelled in fractions of local mfp:
@@ -274,16 +283,16 @@ function ode_boris_mover_mfp_backup(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMa
     #total_path = total_path + norm(v)*Dt;
 
     #local mean freep path:
-    altitude = norm(r) - c.re
-    if isnan(densityf(altitude)[1])
-      println("Altitude [m]: " * string(altitude))
+    alt = norm(r) - c.re
+    if isnan(densityf(alt)[1])
+      println("Altitude [m]: " * string(alt))
       ind = floor(Int, it-1/i_save+1)
       return rvt[:, ind], 0, 0
       error("Density is nan. Check altitude range")
     end
-    lam = sum(cross_sections .* densityf(altitude))
+    lam = sum(cross_sections .* densityf(alt))
     
-    #mfp = 1/sum(sigma(Ekin) .* ns(altitude))
+    #mfp = 1/sum(sigma(Ekin) .* ns(alt))
 
 
     #path travelled in fractions of local mfp:
@@ -608,8 +617,8 @@ Base.propertynames(x::DotStruct) = keys(getfield(x, :properties))
 
 ##
 n_mfp = 1e-2
-E_0 = 50 #EV
-v_0    = (2*c.qe*E_0/c.me).^(1/2); 
+E0 = 50 #EV
+v_0    = (2*c.qe*E0/c.me).^(1/2); 
 r0v0 = [0, 0, c.re+500e3, v_0, 0, 0]
 Bin(p) = [0, 0, 4.5e-5]
 
