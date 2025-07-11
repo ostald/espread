@@ -1,5 +1,41 @@
 using LinearAlgebra
+using StaticArrays
 
+
+
+function dipole_field_earth!(B, p)
+    vm = @SVector [0, 0, -8.22e15] # Tm3
+    dipole_field!(B, p, vm)
+    nothing
+end
+
+function dipole_field!(B, p, vm)
+    #so far the fastest!
+    r = norm(p)
+    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    nothing
+end
+
+"""
+B = @MArray zeros(Float64, 3)
+p = @MArray rand(3)
+@btime dipole_field_earth!(B, p)
+"""
+
+
+
+"""
+
+function make_dipole_field_earth()
+    vm = [0, 0, -8.22e15] # Tm3
+    function dipole_field_earth!(B::Vector{Float64}, p::Vector{Float64})
+        dipole_field!(B, p, vm)
+        nothing
+    end
+    return dipole_field_earth!
+end
+
+"""
 
 function dipole_field_earth(p::Vector{Float64})
     vm = [0, 0, -8.22e15] # Tm3
@@ -7,12 +43,15 @@ function dipole_field_earth(p::Vector{Float64})
 end
 
 
-function dipole_field_earth!(B::Vector{Float64}, p::Vector{Float64})
-    vm = [0, 0, -8.22e15] # Tm3
-    dipole_field!(B, p, vm)
-    nothing
+function dipole_field(p::Vector{Float64}, vm::Vector{Float64})
+    #so far the fastest!
+    r = norm(p)
+    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    return B
 end
 
+
+"""
 
 function dipole_field_(p, vm)
     # p - point to calculate the magnetic field
@@ -37,27 +76,17 @@ function dipole_field_(p, vm)
 end
 
 
-B = Vector{Float64}(undef, 3)
-
-function dipole_field(p::Vector{Float64}, vm::Vector{Float64})
-    #so far the fastest!
-    r = norm(p)
-    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
-    return B
-end
-
-
-
+#B = Vector{Float64}(undef, 3)
 
 function dipole_field!(B::Vector{Float64}, p::Vector{Float64}, vm::Vector{Float64})
     #so far the fastest!
     r = norm(p)
-    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
     nothing
 end
 
 
-"""
+
 function dipole_field4(p, vm)
 
     r = norm(p)
