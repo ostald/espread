@@ -72,7 +72,7 @@ cs_e_O(Ep)  = only.([cs([float(Ep)]) for cs in sp_O[:, 4]])
 # stacked, so it can be multiplies by a vector of densities: 
 # cs_all(Ep) .* [nN2, nO2, nO]
 # be aware of ordering!
-cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep)]
+cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep)]::Vector{Vector{Float64}}
 sp_all = [sp_N2; sp_O2; sp_O]
 
 # summed for total cross section:
