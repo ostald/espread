@@ -3,8 +3,8 @@
 using Dates
 
 # Define initial energy
-#E0 = 4000 #eV
-e_energy = [500, 1e4, 2e4, 4e4, 8e4]
+E0 = 1e4 #eV
+e_energy = [500, 1e3, 2e3, 4e3, 8e3]
 
 # Define number of particles
 N_electrons = 1000
@@ -13,10 +13,10 @@ N_electrons = 1000
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-#lim_pitch_deg = 10 #deg
+lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
 
-pitch_limits = [20, 90]
+pitch_limits_deg = [20, 90]
 
 # initiate seed
 #Random.seed!(Int(E0)) # use energy as seed so that runs of the same energy are reproducible
