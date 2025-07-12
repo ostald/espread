@@ -1,8 +1,8 @@
-#include("espread.jl")
 include("setup.jl")
 
 using Distributed
-procs = addprocs(10)
+nprocesses = 10 
+prcs = addprocs(nprocesses)
 
 @everywhere include("espread.jl")
 
@@ -22,11 +22,28 @@ f10 = @spawnat 10 main(8000, N_electrons, alt0, 20, loc_gmag, loc_geod)
 f11 = @spawnat 11 main(8000, N_electrons, alt0, 90, loc_gmag, loc_geod)
 """
 
-i_proc = 2
+#wrkrs = Vector{Any}(undef, nprocesses)
+
+#include("espread.jl")
+#main(E0, 10, alt0, pitch_lim, loc_gmag, loc_geod, c)
+println(workers())
+
+global i_proc = 1
 for E0 in e_energy
-    for pl in pitch_limits_deg
-        @spawnat i_proc  main(E0, N_electrons, alt0, pl, loc_gmag, loc_geod, c)
-        i_proc = i_proc+1
-        break
+    for pitch_lim in pitch_limits_deg
+        @spawnat workers()[i_proc] main(E0, N_electrons, alt0, pitch_lim, loc_gmag, loc_geod, c)
+        global i_proc = i_proc+1
     end
 end
+
+
+# kill all workers:
+#rmprocs(Distributed.workers(), waitfor = 1)
+
+for i in workers()
+    w = Distributed.worker_from_id(i)
+    kill(w.config.process, Base.SIGKILL)
+end
+
+# check on silent failure:
+# Distributed.worker_from_id(2)

@@ -2,7 +2,7 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf, c)#; OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [])
   # returns:
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
@@ -56,7 +56,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf, c)#; OPS 
   v = r0v0[4:6];
   #r = rvt[1:3,1];
   #v = rvt[4:6,1];
-  Ekin = E_ev(norm(v), c)
+  Ekin = E_ev(norm(v))
   cross_sections = sigma(Ekin)
 
 
@@ -119,7 +119,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf, c)#; OPS 
     #total_path = total_path + norm(v)*Dt;
 
     # local mean freep path:
-    alt = altitude(r, c)
+    alt = altitude(r)
     if alt > max_altitude
       # dot(v, B) projects v on B, yielding v_par*norm(B)
       # this gets rid of v_perp
@@ -283,7 +283,7 @@ function ode_boris_mover_mfp_backup(n_mfp, r0v0, q, m, Bin, sigma, densityf; wMa
     #total_path = total_path + norm(v)*Dt;
 
     #local mean freep path:
-    alt = norm(r) - c.re
+    alt = altitude(r)
     if isnan(densityf(alt)[1])
       println("Altitude [m]: " * string(alt))
       ind = floor(Int, it-1/i_save+1)

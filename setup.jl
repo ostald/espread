@@ -13,7 +13,7 @@ N_electrons = 1000
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-lim_pitch_deg = 20 #deg
+pitch_lim = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
 
 pitch_limits_deg = [20, 90]

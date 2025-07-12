@@ -28,7 +28,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     lat_gmag = loc_gmag[1]
     gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
     #check altidute
-    @assert abs(alt0 - altitude(gc0, c)) < 10 #m        10m within target altitude is ok.
+    @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
     
     B0 = dipole_field_earth(gc0)
     #create orthogonal vectorsystem along B0
@@ -40,7 +40,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     # starting velocity
     # energy must be float
     E0 = float(E0)
-    v0_mag = v_abs(E0, c)           # convert to veloicty => relativistic?
+    v0_mag = v_abs(E0)           # convert to veloicty => relativistic?
     v0_par = v0_mag*cos(pitch)   # calculate parallel component
 
     # for parallel component, find normal vecotors, get random phase, distribute velocity accordingly
@@ -69,7 +69,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     #   >   1.0
     #   >   1.0
 
-    @assert abs(alt0 - altitude(r0, c)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
+    @assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
 
     return r0, v0
 end
@@ -89,7 +89,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
     
     v = v0
     r = r0
-    E = E_ev(norm(v), c)
+    E = E_ev(norm(v))
     status = -1 #undef
 
     #propagate electron until it runs out of energy to ionize
@@ -99,8 +99,8 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
         Bin!(B, p) = dipole_field_earth!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
-        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, c)
-        E = E_ev(norm(v), c)
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf)
+        E = E_ev(norm(v))
 
         if status == 1
             nothing
@@ -124,7 +124,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
 
         # use cross sections of all scatter processes directly, not summed for each species
         # thereby one random number decides directly which scattering process is triggered
-        ns = densityf(altitude(r, c))
+        ns = densityf(altitude(r))
         scatter_p = vcat((cs_all(E) .* ns)...)
         idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
 
@@ -145,7 +145,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
         sc_f   = sp_all[idx_scatter, 6]
 
         #ensure E_loss is not bigger than the kinetic energy
-        while E_loss > E_ev(norm(v), c)
+        while E_loss > E_ev(norm(v))
             idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
             E_loss = sp_all[idx_scatter, 2]
             sc_f   = sp_all[idx_scatter, 6]
@@ -157,7 +157,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
             out = sc_f(v, E_loss)
         catch
             print("r = ", r,"; v = ", v, "; idx_scatter = ", idx_scatter, "\n")
-            print("Ekin - E_loss = ", E_ev(norm(v), c) - E_loss)
+            print("Ekin - E_loss = ", E_ev(norm(v)) - E_loss)
             error("boom")
         end
         """
@@ -186,7 +186,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
         end
 
         #update energy after collision!
-        E = E_ev(norm(v), c)
+        E = E_ev(norm(v))
 
     end
 
@@ -246,7 +246,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
     while n_e_sim <= N_electrons
         println("Electron number: ", n_e_sim)
         #try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
             propagate_electron(v0, r0, densityf, res_dir, c)
             n_e_sim = n_e_sim +1
         #catch
