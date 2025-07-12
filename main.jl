@@ -26,7 +26,7 @@ f11 = @spawnat 11 main(8000, N_electrons, alt0, 90, loc_gmag, loc_geod)
 
 #include("espread.jl")
 #main(E0, 10, alt0, pitch_lim, loc_gmag, loc_geod, c)
-println(workers())
+#println(workers())
 
 global i_proc = 1
 for E0 in e_energy
@@ -39,11 +39,11 @@ end
 
 # kill all workers:
 #rmprocs(Distributed.workers(), waitfor = 1)
-
+"""
 for i in workers()
     w = Distributed.worker_from_id(i)
     kill(w.config.process, Base.SIGKILL)
 end
-
+"""
 # check on silent failure:
 # Distributed.worker_from_id(2)

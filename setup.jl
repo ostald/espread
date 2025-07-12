@@ -7,7 +7,7 @@ E0 = 1e4 #eV
 e_energy = [500, 1e3, 2e3, 4e3, 8e3]
 
 # Define number of particles
-N_electrons = 1000
+N_electrons = 10000
 
 # starting altitude
 alt0 = 600e3 #m
