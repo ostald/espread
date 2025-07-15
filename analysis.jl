@@ -23,7 +23,7 @@ res = Vector{Any}(undef, length(folders))
     df.r = [eval(Meta.parse(value)) for value in df.r]
     df.v = [eval(Meta.parse(value)) for value in df.v]
     res[id] = df
-end
+#end
 
 # check for fails in Boris mover:
 if size(filter(row -> :status .== 0, df))[1] > 0
@@ -50,7 +50,7 @@ df.alt = ifelse.(df.alt0 .> 599e3, df.alt_end, df.alt0)
 df.pos = ifelse.(df.alt0 .> 599e3, df.r, df.r0)
 
 
-
+include("setup.jl")
 hmin = 80e3     #m
 hmax = alt0+1e4 #m
 intervals = 1e3 #m
@@ -96,6 +96,7 @@ lat_gmag = loc_gmag[1]
 gc = [(c.re + h) * [0, cos(lat_gmag), sin(lat_gmag)] for h in hmsis]
     
 B0 = dipole_field_earth.(gc)
+[b/norm(b) for b in B0]
 
 or = [0, 0, 0]
 fig = arrows3d(Point3(or), Vec3(B0[1]), alpha = 0.3)#, tipcolor = :red, label = "B/|B|")
@@ -103,7 +104,8 @@ arrows3d!(Point3(or), Vec3(B0[end]))
 #magnetic field cunrvature can be neglected
 
 #create orthogonal vectorsystem along B0
-u1, u2, u3 = local_orthogonal_basis(B0[1])
+include("local_ortognal_basis.jl")
+u1, u2, u3 = local_orthogonal_basis(B0[end])
 
 origin = (c.re + hmsis[1]) * [0, cos(lat_gmag), sin(lat_gmag)]
 
@@ -119,4 +121,76 @@ zlims!(ax, -2e5, -1e5)
 ylims!(ax, -1.5e5, -0.5e5)
 ylims!(ax, -3, 3)
 
-meshscatter(Point3.((filter(row -> row.alt > 105e3 && row.alt < 106e3, df).pos_fa)), markersize = 1e1)
+meshscatter(Point3.((filter(row -> row.alt > 100e3 && row.alt < 111e3, df).pos_fa)), markersize = 1e1)
+
+
+#start with B0 at starting point:
+lat_gmag = loc_gmag[1]
+gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+B0 = dipole_field_earth(gc0)
+#create orthogonal vectorsystem along B0
+u1, u2, u3 = local_orthogonal_basis(B0)
+B_next = dipole_field_earth(gc_next)
+
+function trace_fieldline(p0, fB)
+    p = p0
+    B = fB(p0)
+    p_next = [p]
+    B_save = [B]
+    while altitude(p) > 0
+        p = p + B/norm(B)*1e3 #km steps
+        B = fB(p)
+        p_next = [p_next..., p]
+        B_save = [B_save..., B]
+    end
+    return p_next, B_save
+end
+trace, B = trace_fieldline(gc0, dipole_field_earth)
+origin = trace[end]
+
+scatter(Point3.(trace))
+altitude.(trace)
+
+
+#df.nearest_trp = [findfirst(x -> x < altitude(p)-10000, altitude.(trace)) for p in df.pos]
+
+function align_to_B(B0, pos, origin)
+    u1, u2, u3 = local_orthogonal_basis(B0)
+    mat = inv([-u1 u2 -u3])
+    pos_fa = mat * (pos-origin)
+    return pos_fa
+end
+ 
+
+df.pos
+trace
+
+df.nearest_idx = [argmin([norm(t - pos) for t in trace]) for pos in df.pos]
+
+function project_on_line(pos, a, b)
+    #projects a vector pos on the closest point on a line,
+    #given by vecotrs a, b: line = a + c*b
+    # b must be unit vector
+    # with c a free parameter
+    return a - (dot((a - pos), b) * b)
+end
+
+function find_fa_pos(pos, idx)
+    a = trace[idx]
+    b = B[idx]/norm(B[idx])
+    nearest_pos_on_line = project_on_line(pos, a, b)
+    B0 = dipole_field_earth(nearest_pos_on_line)
+    return align_to_B(B0, pos, origin)
+end
+
+df.pos_fa = [find_fa_pos(p, i) for (p, i) in zip(df.pos, df.nearest_idx)]
+meshscatter(Point3.((filter(row -> row.alt > 100e3 && row.alt < 111e3, df).pos_fa)), markersize = 1e1)
+
+
+fig = Figure()
+ax = Axis3(fig[1, 1], aspect=(1, 1, 1))
+sc = meshscatter!(ax, Point3.((filter(row -> row.alt > 100e3 && row.alt < 110e3, df).pos_fa))./1e3, markersize = 1e-3)#, 
+    #axis=(limits=(nothing, nothing, nothing),),)
+zlims!(ax, -2e5, -1e5)
+ylims!(ax, -1.5e5, -0.5e5)
+ylims!(ax, -3, 3)
