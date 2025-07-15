@@ -91,6 +91,7 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
     r = r0
     E = E_ev(norm(v))
     status = -1 #undef
+    #status -1 will be retained if particle has low energy, such that the boris mover is not initiated
 
     #propagate electron until it runs out of energy to ionize
     while E > 12.072

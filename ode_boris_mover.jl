@@ -7,6 +7,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
   #           2=particle is outgoing and above max_altitude
+  #           -1 = undef
   #   r: particle position
   #   v: particle velocity
   #   t: particle time, starting with t=0 at r0v0
