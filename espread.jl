@@ -124,8 +124,13 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
         # after moving electron, scatter:
 
         # use cross sections of all scatter processes directly, not summed for each species
-        # thereby one random number decides directly which scattering process is triggered
+        # thereby one random number decides directly which scattering process is triggered 
+        #try
         ns = densityf(altitude(r))
+        #catch
+        #    print(r)
+        #    error()
+        #end       
         scatter_p = vcat((cs_all(E) .* ns)...)
         idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
 
@@ -213,33 +218,33 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
     loc_gmag = Float64.(loc_gmag)
     loc_geod = Float64.(loc_geod)
     
-    seed_value = round(Int, E0 + lim_pitch_deg)
+    #seed_value = round(Int, E0 + lim_pitch_deg)
+    seed_value = rand(Int)
     Random.seed!(seed_value)
-
-    # Results directory
-    res_dir = joinpath("results", "res_$(E0)eV_$(lim_pitch_deg)deg_" * string(now()))
-    mkdir(res_dir)
-    open(joinpath(res_dir, "results.txt"), "w") do file
-        write(file, "E0 = $E0\n")
-        write(file, "pitch limit = $lim_pitch_deg\n")
-        write(file, "Seed = $seed_value\n\n")
-    end
     
-    function make_densityf()
-        hmin = 80e3     #m
-        hmax = alt0+1e4 #m
-        intervals = 1e3 #m
-        hmsis = hmin:intervals:hmax
-        atm = Float64.(atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2]))
-        return densityf_fast(alt) = atm[round(Int, (alt-hmin)/intervals+1), :]
-    end
-    densityf = make_densityf()
+    hmin = 80e3     #m
+    hmax = alt0+1e4 #m
+    hintervals = 1e3 #m
+    densityf = make_densityf(hmin, hmax, hintervals)
     #stack(densityf_fast.(hmsis))' == atm
     #    > true
 
     #hmsis = 80e3:1e3: #km
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
+
+    # Results directory
+    res_dir = joinpath("results", "res_$(E0)eV_$(lim_pitch_deg)deg_" * string(now()))
+    mkdir(res_dir)
+    open(joinpath(res_dir, "results.txt"), "w") do file
+        write(file, "E0 = $E0\n")
+        write(file, "lim_pitch_deg = $lim_pitch_deg\n")
+        write(file, "seed_value = $seed_value\n")
+        write(file, "hmin = $hmin\n")
+        write(file, "hmax = $hmax\n")
+        write(file, "hintervals = $hintervals\n\n")
+    end
+    
     lim_pitch = lim_pitch_deg/180*pi
 
     n_e_sim = 1
@@ -256,6 +261,9 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
     end
     return nothing
 end
+
+#main(E0, 10, alt0, pitch_lim, loc_gmag, loc_geod, c)
+
 
 #E0 = 4000 #eV
 #@time main(Int(E0), 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
@@ -368,3 +376,37 @@ hist([findfirst(cumsum(scatter_p) .> r_scatter) for r_scatter in rand(nsample).*
     )
 """
 
+
+"""
+
+using HDF5
+res_dir = joinpath("results")
+num_results = floor(Int, N_electrons * E0 / 35 * 1.1 ) #approximate number of electrons
+mkdir(res_dir)
+h5open(joinpath(res_dir, "results.h5"), "w") do file
+    file["E0"] = E0
+    file["lim_pitch_deg"] = pitch_limits_deg
+    file["seed_value"] = seed_value
+    file["results"] = zeros(0, num_results)  # Preallocate an array of size 10
+end
+
+data = ["lala", [1, 2, 3], 0.1]
+
+function save_data(res_dir, data)
+    i = 2
+    h5open(joinpath(res_dir, "results.h5"), "r+") do file
+        file["results"][i] = data  # Update the i-th element
+    end
+    nothing
+end
+save_data(res_dir, data)
+
+
+function load_data(res_dir)
+    return load(joinpath(res_dir, "results.jld2"))
+end
+
+d = load_data(res_dir)
+d["results"]
+
+"""
