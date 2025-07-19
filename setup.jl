@@ -7,7 +7,7 @@ E0 = 1e4 #eV
 e_energy = [500, 1e3, 2e3, 4e3, 8e3]
 
 # Define number of particles
-N_electrons = 1e1
+N_electrons = 1e5
 
 # starting altitude
 alt0 = 600e3 #m
@@ -29,6 +29,12 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
+
+name = "run1"
+res_dir = joinpath("results", name * string(now()))
+mkdir(res_dir)
+
+nprocesses = 50 
 
 
 

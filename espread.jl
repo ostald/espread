@@ -14,7 +14,7 @@ include("ode_boris_mover.jl")
 #load cross sections
 include("cross_sections.jl")
 include("get_msis.jl")
-include("setup.jl")
+#include("setup.jl")
 
 
 #using GLMakie
@@ -75,15 +75,15 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
 end
     
 
-function save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
-    open(joinpath(res_dir, "results.txt"), "a") do file
+function save_endpoint(res_file, r0, v0, status, r, v) #save status too?
+    open(res_file, "a") do file
         write(file, "$r0\t$v0\t$status\t$r\t$v\n")
     end
 end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_dir, c)
+function propagate_electron(v0, r0, densityf, res_file, c)
     #list of secondary electrons
     secondary_e = []
     
@@ -107,8 +107,8 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
             nothing
         elseif status == 2
             #record? do something?
-            println("Particle lost, recorded.\n")
-            save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
+            #println("Particle lost, recorded.\n")
+            save_endpoint(res_file, r0, v0, status, r, v) #save status too?
             break
             #alternatively, check in while statement if state != 2
         elseif status == 0
@@ -197,19 +197,19 @@ function propagate_electron(v0, r0, densityf, res_dir, c)
     end
 
     # save end point and velocity of parent electron
-    save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
+    save_endpoint(res_file, r0, v0, status, r, v) #save status too?
 
     # go through secondary electrons
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_dir, c)
+        propagate_electron(v0, r0, densityf, res_file, c)
     end
 end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir; batch=0)
 
     # make sure all values are floats
     E0 = Float64(E0)
@@ -232,11 +232,9 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
     #hmsis = 80e3:1e3: #km
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
-
     # Results directory
-    res_dir = joinpath("results", "res_$(E0)eV_$(lim_pitch_deg)deg_" * string(now()))
-    mkdir(res_dir)
-    open(joinpath(res_dir, "results.txt"), "w") do file
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*string(batch)*".txt")
+    open(res_file, "w") do file
         write(file, "E0 = $E0\n")
         write(file, "lim_pitch_deg = $lim_pitch_deg\n")
         write(file, "seed_value = $seed_value\n")
@@ -244,6 +242,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
         write(file, "hmax = $hmax\n")
         write(file, "hintervals = $hintervals\n\n")
     end
+    println("res_file = ", res_file)
     
     lim_pitch = lim_pitch_deg/180*pi
 
@@ -253,7 +252,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
         println("Electron number: ", n_e_sim)
         #try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
-            propagate_electron(v0, r0, densityf, res_dir, c)
+            propagate_electron(v0, r0, densityf, res_file, c)
             n_e_sim = n_e_sim +1
         #catch
         #    println("re-initiating electron")
