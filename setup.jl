@@ -30,11 +30,11 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "run1"
-res_dir = joinpath("results", name * string(now()))
+name = "run1_"
+res_dir = joinpath("/mnt/data/oliver/espread/results", name * string(now()))
 mkdir(res_dir)
 
-nprocesses = 100 
+nprocesses = 50 
 
 
 
