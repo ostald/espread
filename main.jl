@@ -10,6 +10,7 @@ for batch in 1:100
     for E0 in e_energy
         @distributed for pitch_lim in pitch_limits_deg
                 @time main(E0, N_electrons, alt0, pitch_lim, loc_gmag, loc_geod, c, res_dir; batch=batch)
+                print("E0 = ", E0, "\npitch_lim = ", pitch_lim, "\nbatch = ", batch, "\n\n")
             #global i_proc = i_proc+1
         end
     end
