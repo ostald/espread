@@ -36,7 +36,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
 
   nPerGyro = 20;
   wMax = 0;
-  trace = false;
+  trace = true;
   i_save = 1;
   max_altitude = 61e4;
 
@@ -121,6 +121,14 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
 
     # local mean freep path:
     alt = altitude(r)
+    if alt < 0
+      if trace
+        ind = Int(floor(it_current/i_save)+1)
+        return 3, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
+      else
+        return 3, r, v, t_running
+      end
+    end
     if alt > max_altitude
       # dot(v, B) projects v on B, yielding v_par*norm(B)
       # this gets rid of v_perp
@@ -130,7 +138,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
         # if particle moves outwards, and crosses max_altitude,
         # return state 2, r, v, t
         if trace
-          ind = Int(it_current/i_save)+1
+          ind = Int(floor(it_current/i_save)+1)
           return 2, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
         else
           return 2, r, v, t_running
@@ -140,7 +148,7 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
         println("Altitude [m]: " * string(alt))
         if trace
           # if tracing is on, return state 0 (failure) and trace (rvt)
-          ind = Int(it_current/i_save)+1
+          ind = Int(floor(it_current/i_save)+1)
           return 0, rvt[1:3, 1:ind], rvt[4:6, 1:ind], rvt[7, 1:ind]
         else
           error("Altitude over maximum, velocity invards.")
