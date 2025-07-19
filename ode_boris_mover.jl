@@ -2,7 +2,7 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf; trace = false)#; OPS = [])
   # returns:
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
@@ -36,7 +36,6 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf)#; OPS = [
 
   nPerGyro = 20;
   wMax = 0;
-  trace = true;
   i_save = 1;
   max_altitude = 61e4;
 
