@@ -26,11 +26,25 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     
     # gyrocenter 
     lat_gmag = loc_gmag[1]
-    gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+    
+    #for dipole field:
+    #gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+
+    #for conic B:
+    gc0 = (c.re + alt0) .* [0, 0, 1]
+
+
     #check altidute
     @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
     
-    B0 = dipole_field_earth(gc0)
+    #dipole field:
+    #B0 = dipole_field_earth(gc0)
+
+    #conic field:
+    B0 = zeros(3)
+    convergent_vertical_field!(B0, gc0)
+
+
     #create orthogonal vectorsystem along B0
     u1, u2, u3 = local_orthogonal_basis(B0)
 
@@ -97,7 +111,10 @@ function propagate_electron(v0, r0, densityf, res_file, c)
     while E > 12.072
         r0v0 = [r; v]
         #magnetic field handle for boris mover: (static field)
-        Bin!(B, p) = dipole_field_earth!(B, p)
+        #dipole field:
+        #Bin!(B, p) = dipole_field_earth!(B, p)
+        #conic field:
+        Bin!(B, p) = convergent_vertical_field!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
         status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf)
@@ -261,6 +278,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     return nothing
 end
 
+main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir; batch=0)
 #main(E0, 10, alt0, pitch_lim, loc_gmag, loc_geod, c)
 
 

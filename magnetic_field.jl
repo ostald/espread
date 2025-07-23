@@ -1,7 +1,21 @@
 using LinearAlgebra
 using StaticArrays
+include("constants.jl")
 
+function make_convergent_vertical_field(c)
+    z0 = (c.re + 80e3) #z0 at 80km above earth radius
+    c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
+    dBdz = -6*c1 / z0^4
+    function convergent_vertical_field!(B, p)
+        B[1] = -1/2 * p[1] * dBdz
+        B[2] = -1/2 * p[2] * dBdz
+        B[3] = -c1*2 / p[3]^3 
+        nothing
+    end
+    return convergent_vertical_field!
+end
 
+convergent_vertical_field! = make_convergent_vertical_field(c)
 
 function dipole_field_earth!(B, p)
     vm = @SVector [0, 0, -8.22e15] # Tm3
