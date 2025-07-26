@@ -278,7 +278,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     return nothing
 end
 
-main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir; batch=0)
+main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir)
 #main(E0, 10, alt0, pitch_lim, loc_gmag, loc_geod, c)
 
 

@@ -13,7 +13,7 @@ N_electrons = 1e4
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-pitch_lim = 20 #deg
+lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
 
 pitch_limits_deg = [20, 90]
@@ -31,7 +31,7 @@ loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
 name = "conicB_"
-res_dir = joinpath("/mnt/data/oliver/espread/results", name * string(now()))
+res_dir = joinpath("/nfs/revontuli/data/oliver/espread/results", name * string(now()))
 mkdir(res_dir)
 
 nprocesses = 50 
