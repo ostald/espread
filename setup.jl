@@ -31,7 +31,7 @@ loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
 name = "conicB_"
-res_dir = joinpath("/nfs/revontuli/data/oliver/espread/results", name * string(now()))
+res_dir = joinpath("results", name * string(now()))
 mkdir(res_dir)
 
 nprocesses = 50 
