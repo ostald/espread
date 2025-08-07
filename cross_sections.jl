@@ -59,6 +59,9 @@ function get_scattering_parameters(species_name)
     return scat_par
 end
 
+## for typestable code, avoid global variables!
+# => solution is a function barrier
+
 # get scattering parameters for all species:
 sp_N2 = get_scattering_parameters("N2")
 sp_O2 = get_scattering_parameters("O2")
