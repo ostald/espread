@@ -23,15 +23,17 @@ function make_convergent_vertical_field_demo(c)
     return convergent_vertical_field!, convergent_vertical_field
 end
 
-convergent_vertical_field_demo!, convergent_vertical_field_demo = make_convergent_vertical_field_demo(c)
 
+convergent_vertical_field_demo!, convergent_vertical_field_demo = make_convergent_vertical_field_demo(c)
+"""
 zz = [100, 200, 300, 400, 500]*1e3 .+ 500e3
 yy = [-200, -100, 0, 100, 200.0] .*2
-using CairoMakie
+using GLMakie
 p = [Point3([0, y, z]) for y in yy for z in zz]
 v = Vec3.(convergent_vertical_field_demo.(p))
 f = arrows3d(p, v, lengthscale = 1e6, axis=(type=Axis3, azimuth = 0, elevation = 0),)
 save("figures/conicB.png", f)
+"""
 
 function make_convergent_vertical_field(c)
     z0 = (c.re + 80e3) #z0 at 80km above earth radius

@@ -29,24 +29,22 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
     # gyrocenter 
     lat_gmag = loc_gmag[1]
     
-    #for dipole field:
-    #gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+    if b_model == "vertical"
+        #for vertical B:
+        gc0 = (c.re + alt0) .* [0, 0, 1]
+       #check altidute
+        @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+        B0 = zeros(3)
+        convergent_vertical_field!(B0, gc0)
 
-    #for conic B:
-    gc0 = (c.re + alt0) .* [0, 0, 1]
-
-
-    #check altidute
-    @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+    elseif b_model == "dipole"
+        #for dipole field:
+        gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+        #check altidute
+        @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+        B0 = dipole_field_earth(gc0)
+    end
     
-    #dipole field:
-    #B0 = dipole_field_earth(gc0)
-
-    #conic field:
-    B0 = zeros(3)
-    convergent_vertical_field!(B0, gc0)
-
-
     #create orthogonal vectorsystem along B0
     u1, u2, u3 = local_orthogonal_basis(B0)
 
@@ -99,7 +97,7 @@ end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_file, c)
+function propagate_electron(v0, r0, densityf, res_file, c, Bin!)
     #list of secondary electrons
     secondary_e = []
     
@@ -116,7 +114,7 @@ function propagate_electron(v0, r0, densityf, res_file, c)
         #dipole field:
         #Bin!(B, p) = dipole_field_earth!(B, p)
         #conic field:
-        Bin!(B, p) = convergent_vertical_field!(B, p)
+        #Bin!(B, p) = convergent_vertical_field!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
         status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf)
@@ -222,13 +220,20 @@ function propagate_electron(v0, r0, densityf, res_file, c)
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_file, c)
+        propagate_electron(v0, r0, densityf, res_file, c, Bin!)
     end
 end
 
 
 
 function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir; batch=0)
+
+    Bin!(B, p) = 0
+    if b_model == "dipole"
+        Bin!(B, p) = dipole_field_earth!(B, p)
+    elseif b_model == "vertical"
+        Bin!(B, p) = convergent_vertical_field!(B, p)
+    end
 
     # make sure all values are floats
     E0 = Float64(E0)
@@ -252,6 +257,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
     # Results directory    
+    mkdir(res_dir)
     res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
     open(res_file, "w") do file
         write(file, "E0 = $E0\n")
@@ -271,7 +277,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         #println("Electron number: ", n_e_sim)
         try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
-            propagate_electron(v0, r0, densityf, res_file, c)
+            propagate_electron(v0, r0, densityf, res_file, c, Bin!)
             n_e_sim = n_e_sim +1
         catch
             println("re-initiating electron")
