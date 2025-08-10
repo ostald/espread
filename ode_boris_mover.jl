@@ -2,7 +2,7 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf; trace = false)#; OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0, v0, q, m, Bin!, sigma, densityf; trace = false, nPerGyro = 20)#; OPS = [])
   # returns:
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
@@ -34,7 +34,6 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf; trace = f
   #i_save = dOPS.i_save;
   #max_altitude = dOPS.max_altitude
 
-  nPerGyro = 20;
   wMax = 0;
   i_save = 1;
   max_altitude = 61e4;
@@ -47,13 +46,13 @@ function ode_boris_mover_mfp(n_mfp, r0v0, q, m, Bin!, sigma, densityf; trace = f
   if trace
     ## Start assigning tracing variables:
     rvt = zeros((7, 1000)) #rv[6,numel(t)] = 0;
-    rvt[:,1] = [r0v0; 0]
+    rvt[:,1] = [r0; v0; 0]
     it_current = 0
   end
   
   # Initialize the particle position and velocity:
-  r = r0v0[1:3];
-  v = r0v0[4:6];
+  r = r0; #v0[1:3];
+  v = v0; #[4:6];
   #r = rvt[1:3,1];
   #v = rvt[4:6,1];
   Ekin = E_ev(norm(v))

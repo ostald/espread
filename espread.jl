@@ -22,7 +22,7 @@ include("get_msis.jl")
 #using GLMakie
 
 
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
     ##
     # initialize new electron
     
@@ -63,14 +63,29 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
 
     r0_gyro = c.me * v0_perp / (c.qe * norm(B0))
 
+    #boris mover calculates velocities at half steps
+    #have v0 also at a half step, so gyrocenter remains centered on above defined gyrocenter
+    halfstep = pi / nPerGyro
+
     # calculate r0 and v0 in n1, n2 directions, and convert to original coordinate system
-    r_n1 =  cos(phase) * r0_gyro .* u1
-    r_n2 =  sin(phase) * r0_gyro .* u2
-    v_n1 = -sin(phase) * v0_perp .* u1
-    v_n2 =  cos(phase) * v0_perp .* u2
-    v_n3 =  v0_par .* u3
+    # subtract halfstep in angle, to account for boris mover half steps
+    r_n1 =  cos(phase - halfstep) * r0_gyro .* u1
+    r_n2 =  sin(phase - halfstep) * r0_gyro .* u2
     r0 = gc0 .+ r_n1 .+ r_n2
+
+
+    r_n1_hs =  cos(phase) * r0_gyro .* u1
+    r_n2_hs =  sin(phase) * r0_gyro .* u2
+    r0_hs = gc0 .+ r_n1_hs .+ r_n2_hs
+
+    convergent_vertical_field!(B0, r0_hs)
+    u1, u2, u3 = local_orthogonal_basis(B0)
+
+    v_n1 =  sin(phase) * v0_perp .* u1
+    v_n2 = -cos(phase) * v0_perp .* u2
+    v_n3 =  v0_par .* u3
     v0 = v_n1 .+ v_n2 .+ v_n3
+
 
     # alternatively, the offset from the gyrocenter can be calculated using
     # the cross product of v0, B0:
@@ -97,7 +112,7 @@ end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_file, c, Bin!)
+function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
     #list of secondary electrons
     secondary_e = []
     
@@ -109,7 +124,7 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!)
 
     #propagate electron until it runs out of energy to ionize
     while E > 12.072
-        r0v0 = [r; v]
+        #r0v0 = [r; v]
         #magnetic field handle for boris mover: (static field)
         #dipole field:
         #Bin!(B, p) = dipole_field_earth!(B, p)
@@ -117,7 +132,7 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!)
         #Bin!(B, p) = convergent_vertical_field!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
-        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin!, cs_all_sum, densityf)
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r, v, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = false, nPerGyro = nPerGyro)
         E = E_ev(norm(v))
 
         if status == 1
@@ -220,7 +235,7 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!)
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_file, c, Bin!)
+        propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
     end
 end
 
@@ -275,13 +290,13 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
-        try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
-            propagate_electron(v0, r0, densityf, res_file, c, Bin!)
+        #try
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
+            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
             n_e_sim = n_e_sim +1
-        catch
-            println("re-initiating electron")
-        end
+        #catch
+        #    println("re-initiating electron")
+        #end
     end
     return nothing
 end
@@ -337,20 +352,37 @@ arrows3d!(Point3(pp), Vec3(v0)./1e7, tipcolor = :blue, label = "v", tipradius = 
 axislegend()
 """
 
-
 """
 OPS = (trace = true,)
 status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
-rp = r .- r0
 zs = LinRange(0, 3, 200)
-meshscatter([tuple(p...) for p in eachcol(rp[:, 1321001:1321200])], markersize = 1, color = zs)
+meshscatter([tuple(p...) for p in eachcol(rp[:, 1:1000])], markersize = 1)#, color = zs)
+
+using GLMakie
+rp = r
+moving_average(vs,n) = [sum(vs[:, i:(i+n-1)], dims=2)/n for i in 1:(size(vs, 2)-(n-1))]
+rp_av = moving_average(rp, 200)
+f = Figure()
+ax = Axis3(f[1, 1])
+scatter!(ax, [tuple(p...) for p in eachcol(rp[:, 1:200])], markersize = 5)#, color = zs)
+scatter!(ax, [tuple(p...) for p in rp_av[1:200]], markersize = 5)#, color = zs)
+B = zeros(3)
+Bin!(B, rp_av[1])
+arrows3d!(Point3(rp_av[1][:]), Vec3(B.*1e9))
+arrows3d!(Point3(gc0), Vec3((r_n1 .+ r_n2)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((u1/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((u2/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((v_n1 .+ v_n2)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((v_n3)/5e2), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0_hs), Vec3((v0)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3(convergent_vertical_field(r0).*5e9), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+#ax.aspect = (1, 1, 10)
 
 
 tt = rvt[7, :]
 altitude = [norm(p) - c.re for p in eachcol(r)]
 lines(t, altitude)
 """
-
 
 """
 function plot_local_v(r, v, Bin)

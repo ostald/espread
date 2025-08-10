@@ -22,6 +22,8 @@ lim_pitch_deg = 20 #deg
 
 pitch_limits_deg = [20, 90]
 
+nPerGyro = 20
+
 # initiate seed
 #Random.seed!(Int(E0)) # use energy as seed so that runs of the same energy are reproducible
 
