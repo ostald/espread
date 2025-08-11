@@ -1,4 +1,5 @@
 include("setup.jl")
+mkdir(res_dir)
 
 using Distributed
 prcs = addprocs(nprocesses)
@@ -9,18 +10,19 @@ prcs = addprocs(nprocesses)
 for batch in 1:100
     for E0 in e_energy
         @distributed for pitch_lim in pitch_limits_deg
-                @time main(E0, N_electrons, alt0, pitch_lim, loc_gmag, loc_geod, c, res_dir; batch=batch)
+                @time main(E0, N_electrons, alt0, pitch_lim, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=batch)
                 print("E0 = ", E0, "\npitch_lim = ", pitch_lim, "\nbatch = ", batch, "\n\n")
             #global i_proc = i_proc+1
         end
     end
 end
 
-
+"""
 include("setup.jl")
+mkdir(res_dir)
 include("espread.jl")
-@profview main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir)
-
+@profview main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro)
+"""
 
 # kill all workers:
 #rmprocs(Distributed.workers(), waitfor = 1)

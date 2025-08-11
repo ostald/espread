@@ -22,7 +22,7 @@ include("get_msis.jl")
 #using GLMakie
 
 
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
     ##
     # initialize new electron
     
@@ -241,7 +241,7 @@ end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir; batch=0)
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0)
 
     Bin!(B, p) = 0
     if b_model == "dipole"
@@ -272,7 +272,6 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
     # Results directory    
-    mkdir(res_dir)
     res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
     open(res_file, "w") do file
         write(file, "E0 = $E0\n")
@@ -291,7 +290,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
         #try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
             propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
             n_e_sim = n_e_sim +1
         #catch
