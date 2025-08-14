@@ -1,31 +1,46 @@
 using CSV
 using DataFrames
 using LinearAlgebra
+using JLD2
 include("constants.jl")
 
+dir = "results/run1_2025-07-19T21:53:59.887/"
+dir_con = readdir(dir)
 
-dir = readdir("results/")
-filter_crit = "res"
-folders = filter(x-> contains(x, filter_crit), dir)
+runs = unique([d[1:end-8] for d in dir_con])
 
-res = Vector{Any}(undef, length(folders))
+for r in runs
+    #filter_crit = "res_1000.0eV_20.0deg"
+    filter_crit = r
+    files = filter(x-> contains(x, filter_crit), dir_con)
+    
+    res = Vector{Any}(undef, length(files))
+    
+    #f = files[2]
+    for (id, f) in enumerate(files)
+        df = CSV.read(open(joinpath(dir, f)),
+            header=false,
+            delim = "\t",
+            skipto=8,
+            DataFrame,
+            )
+        rename!(df, [:r0, :v0, :status, :r, :v])
+        df.r0 = [eval(Meta.parse(value)) for value in df.r0]
+        df.v0 = [eval(Meta.parse(value)) for value in df.v0]
+        df.r  = [eval(Meta.parse(value)) for value in df.r]
+        df.v  = [eval(Meta.parse(value)) for value in df.v]
+        res[id] = df
+    end
+    df_comb = vcat(res...)
+    
+    jldsave(joinpath(dir, r * ".jld2"); df_comb)
 
-f = folders[2]
+end
 
-#for (id, f) in enumerate(folders)
-    df = CSV.read(open(joinpath("results", f, "results.txt")),
-        header=false,
-        delim = "\t",
-        skipto=4,
-        DataFrame
-        )
-    rename!(df, [:r0, :v0, :status, :r, :v])
-    df.r0 = [eval(Meta.parse(value)) for value in df.r0]
-    df.v0 = [eval(Meta.parse(value)) for value in df.v0]
-    df.r = [eval(Meta.parse(value)) for value in df.r]
-    df.v = [eval(Meta.parse(value)) for value in df.v]
-#    res[id] = df
-#end
+df_dict = load(joinpath(dir, "res_1000.0eV_20.0deg.jld2"))
+df = df_dict["df_comb"]
+
+
 
 # check for fails in Boris mover:
 if size(filter(row -> :status .== 0, df))[1] > 0
@@ -56,7 +71,7 @@ intervals = 1e3 #m
 hmsis = hmin:intervals:hmax
 
 #Altitude histogram
-using GLMakie
+using CairoMakie
 fig, ax, his = hist(df.alt./1e3,
     bins = hmsis./1e3, 
     direction=:x,
@@ -67,7 +82,7 @@ fig, ax, his = hist(df.alt./1e3,
         ),
     )
 display(fig)
-save(joinpath("results", f, "hist_ionizations_height.png"), fig)
+save(joinpath("results", "hist_ionizations_height.png"), fig)
 
 # 3d point plot of endpoints (earth centered coordinates)
 fig = Figure()
@@ -77,15 +92,16 @@ sc = scatter!(ax,Point3.(df.pos), markersize = 2)#,
 #zlims!(ax, 5.99e6, 6.01e6)
 #ylims!(ax, 2.465e6, 2.48e6)
 #xlims!(ax, -1.5e4/2, 1.5e4/2)
+
 display(fig)
 
 # zoom in by using smaller dataset
-filter_hmin = 100e3
-filter_hmax = 120e3
-df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)
+filter_hmin = 150e3
+filter_hmax = 151e3
+df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)[1:10000, :]
 
 # meshscatter keeps dimensions const
-fig, ax, ms = meshscatter(Point3.(df_filtered.pos), markersize = 1e2)
+fig, ax, ms = scatter(Point3.(df_filtered.pos), markersize = 1e1)
 display(fig)
 
 # transform into field-aligned coordinates
@@ -123,14 +139,14 @@ df_filtered.pos_fa = [mat * (p-origin) for p in  df_filtered.pos]
 # figure shows 400m drift in y
 fig = Figure()
 ax = Axis3(fig[1, 1], aspect=(1, 1, 1))
-sc = meshscatter!(ax, Point3.(df_filtered.pos_fa)./1e3, markersize = 1e-3)#, 
+sc = scatter!(ax, Point3.(df_filtered.pos_fa)./1e3, markersize = 1)#, 
     #axis=(limits=(nothing, nothing, nothing),),)
 #zlims!(ax, -2e5, -1e5)
 #ylims!(ax, -1.5e5, -0.5e5)
 #ylims!(ax, -3, 3)
 display(fig)
 
-meshscatter(Point3.(df_filtered.pos_fa), markersize = 1e2)
+meshscatter(Point3.(df_filtered.pos_fa), markersize = 1)
 #clearly slanted
 
 #trace entire fiedline, for better correction:
