@@ -289,13 +289,13 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
-        #try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
+        try
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
             propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
             n_e_sim = n_e_sim +1
-        #catch
-        #    println("re-initiating electron")
-        #end
+        catch
+            println("re-initiating electron")
+        end
     end
     return nothing
 end
