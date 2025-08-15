@@ -140,7 +140,7 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
         elseif status == 2
             #record? do something?
             #println("Particle lost, recorded.\n")
-            save_endpoint(res_file, r0, v0, status, r, v) #save status too?
+            #save_endpoint(res_file, r0, v0, status, r, v) #save status too?
             break
             #alternatively, check in while statement if state != 2
         elseif status == 0
@@ -290,12 +290,14 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
         try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, nPerGyro)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
             propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
-            n_e_sim = n_e_sim +1
         catch
             println("re-initiating electron")
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
+            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
         end
+    n_e_sim = n_e_sim +1
     end
     return nothing
 end

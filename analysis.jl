@@ -4,7 +4,8 @@ using LinearAlgebra
 using JLD2
 include("constants.jl")
 
-dir = "results/run1_2025-07-19T21:53:59.887/"
+#dir = "results/run1_2025-07-19T21:53:59.887/"
+dir = "results/conicB/"
 dir_con = readdir(dir)
 
 runs = unique([d[1:end-8] for d in dir_con])
@@ -31,14 +32,14 @@ for r in runs
         df.v  = [eval(Meta.parse(value)) for value in df.v]
         res[id] = df
     end
-    df_comb = vcat(res...)
+    df_comb = unique(vcat(res...))
     
     jldsave(joinpath(dir, r * ".jld2"); df_comb)
 
 end
 
 df_dict = load(joinpath(dir, "res_1000.0eV_20.0deg.jld2"))
-df = df_dict["df_comb"]
+df = unique(df_dict["df_comb"])
 
 
 
@@ -57,7 +58,12 @@ filter(row -> row.E0 < 12.072 && row.status != -1, df)
 # primary electrons:
 df.alt0 = altitude.(df.r0)
 df.alt_end = altitude.(df.r)
-filter(:alt0 => x -> x > 599e3, df)
+df_alt0 = filter(:alt0 => x -> x > 599e3, df)
+
+fig = Figure()
+ax = Axis3(fig[1, 1])
+scatter!(ax, Point3.(df_alt0.r0), markersize = 1)#, 
+
 
 # select endpoint for primary electrons, starting point for secondary electrons
 df.alt = ifelse.(df.alt0 .> 599e3, df.alt_end, df.alt0)
@@ -71,7 +77,7 @@ intervals = 1e3 #m
 hmsis = hmin:intervals:hmax
 
 #Altitude histogram
-using CairoMakie
+using GLMakie
 fig, ax, his = hist(df.alt./1e3,
     bins = hmsis./1e3, 
     direction=:x,
@@ -98,11 +104,16 @@ display(fig)
 # zoom in by using smaller dataset
 filter_hmin = 150e3
 filter_hmax = 151e3
-df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)[1:10000, :]
+df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)
 
 # meshscatter keeps dimensions const
 fig, ax, ms = scatter(Point3.(df_filtered.pos), markersize = 1e1)
 display(fig)
+
+fig = Figure()
+ax = Axis3(fig[1, 1])
+scatter!(ax,Point3.(df_filtered.pos), markersize = 1e1)
+scatter!(ax,Point3(sum(df_filtered.pos)./size(df_filtered.pos, 1)), markersize = 1e1)
 
 # transform into field-aligned coordinates
 include("magnetic_field.jl")
