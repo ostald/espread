@@ -65,7 +65,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
 
     #boris mover calculates velocities at half steps
     #have v0 also at a half step, so gyrocenter remains centered on above defined gyrocenter
-    halfstep = pi / nPerGyro
+    halfstep =  pi / nPerGyro
 
     # calculate r0 and v0 in n1, n2 directions, and convert to original coordinate system
     # subtract halfstep in angle, to account for boris mover half steps
@@ -73,11 +73,12 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     r_n2 =  sin(phase - halfstep) * r0_gyro .* u2
     r0 = gc0 .+ r_n1 .+ r_n2
 
-
+    #also calculate position of velocity (halfstep forward)
     r_n1_hs =  cos(phase) * r0_gyro .* u1
     r_n2_hs =  sin(phase) * r0_gyro .* u2
     r0_hs = gc0 .+ r_n1_hs .+ r_n2_hs
 
+    #and mangetic field at that point
     convergent_vertical_field!(B0, r0_hs)
     u1, u2, u3 = local_orthogonal_basis(B0)
 
@@ -86,7 +87,36 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     v_n3 =  v0_par .* u3
     v0 = v_n1 .+ v_n2 .+ v_n3
 
+    status, r, v, t = ode_boris_mover_mfp(1e-6, r0, v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = true, nPerGyro = nPerGyro)
+    
+    #error in gyrocenter:
+    dr = sum(r[:, 1:nPerGyro], dims = 2) ./ nPerGyro
+    dr[3] = 0
+    r0 = r0 - dr[:]
 
+    """
+    using GLMakie
+    rp = r
+    moving_average(vs,n) = [sum(vs[:, i:(i+n-1)], dims=2)/n for i in 1:(size(vs, 2)-(n-1))]
+    rp_av = moving_average(rp, 200)
+    f = Figure()
+    ax = Axis3(f[1, 1])
+    scatter!(ax, [tuple(p...) for p in eachcol(rp[:, 1:20])], markersize = 5)#, color = zs)
+    #xlims!(ax, (-10, 10))
+    scatter!(ax, [tuple(p...) for p in rp_av[1:20]], markersize = 5)#, color = zs)
+    #B = zeros(3)
+    #Bin!(B, rp_av[1][:])
+    #arrows3d!(Point3(rp_av[1][:]), Vec3(B.*2e5))
+    arrows3d!(Point3(gc0), Vec3((r_n1 .+ r_n2)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0), Vec3((u1/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0), Vec3((u2/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0), Vec3((v_n1 .+ v_n2)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0), Vec3((v_n3)/5e2), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0_hs), Vec3((v0)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    arrows3d!(Point3(r0), Vec3(convergent_vertical_field(r0).*5e9), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+    #ax.aspect = (1, 1, 10)
+    """
+    
     # alternatively, the offset from the gyrocenter can be calculated using
     # the cross product of v0, B0:
     #r0_2 = gc0 .- c.me * cross(v0, B0) / (c.qe * norm(B0)^2)
@@ -358,6 +388,7 @@ OPS = (trace = true,)
 status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
 zs = LinRange(0, 3, 200)
 meshscatter([tuple(p...) for p in eachcol(rp[:, 1:1000])], markersize = 1)#, color = zs)
+"""
 
 using GLMakie
 rp = r
