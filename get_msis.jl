@@ -66,3 +66,9 @@ function consolidate_msis(atm)
         end
     end
 """
+
+function make_densityf(hmin, hmax, hintervals)
+    hmsis = hmin:hintervals:hmax
+    atm = Float64.(atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2]))
+    return densityf_fast(alt) = atm[round(Int, (alt-hmin)/hintervals+1), :]
+end

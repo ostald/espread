@@ -52,7 +52,7 @@ function scatter_angle_el_inel(E0, phase_fcn, scatter_mode, nsample::Int)
     """
 end
 
-function scatter(v_in, E_out, theta, phi)
+function scatter_particle(v_in, E_out, theta, phi)
     u1, u2, u_par = local_orthogonal_basis(v_in)
     # use u1 as reference for first rotation
     # rotate scattering angle theta first
@@ -71,7 +71,7 @@ v_in = [0, 0, 1]
 theta = pi/2
 phi = pi
 E_out = 2 * c.me / c.qe
-v_out = scatter(v_in, E_out, theta, phi)
+v_out = scatter_particle(v_in, E_out, theta, phi)
 fig = arrows([Point3f([0, 0, 0])], [Vec3f(v_in)], arrowcolor = :red, label = "v_in")
 arrows!([Point3f([0, 0, 0])], [Vec3f(v_r1)], arrowcolor = :blue)
 arrows!([Point3f([0, 0, 0])], [Vec3f(v_r2)], arrowcolor = :green)
@@ -81,7 +81,7 @@ v_in = [0, 0, 1] * v_abs(500)
 theta = pi/4
 phi = pi/2
 E_out = E_ev(norm(v_in)) *2 
-v_out = scatter(v_in, E_out, theta, phi)
+v_out = scatter_particle(v_in, E_out, theta, phi)
 """
 
 function scatter_elastic_N2(v_in, E_exc = 0)
@@ -91,7 +91,7 @@ function scatter_elastic_N2(v_in, E_exc = 0)
     phi = rand()*2*pi
     E_out = E_in
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -102,7 +102,7 @@ function scatter_inelastic_N2(v_in, E_exc)
     phi = rand()*2*pi
     E_out = E_in - E_exc
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -124,9 +124,9 @@ function scatter_ion_N2(v_in, E_ionization)
     if Es_out > E_primary
         theta = pi/4
         phi = rand()*2*pi
-        vp_out = scatter(v_in, Ep_out, theta, phi)
+        vp_out = scatter_particle(v_in, Ep_out, theta, phi)
 
-        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+        vs_out = scatter_particle(v_in, Es_out, theta, pi-phi)
     else
         #scatter isotrop: primary electron in unchanged
         vp_out = v_in/norm(v_in) * v_abs(Ep_out)
@@ -152,7 +152,7 @@ function scatter_elastic_O2(v_in, E_exc = 0)
     phi = rand()*2*pi
     E_out = E_in
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -163,7 +163,7 @@ function scatter_inelastic_O2(v_in, E_exc)
     phi = rand()*2*pi
     E_out = E_in - E_exc
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -178,9 +178,9 @@ function scatter_ion_O2(v_in, E_ionization)
     if Es_out > E_primary
         theta = pi/4
         phi = rand()*2*pi
-        vp_out = scatter(v_in, Ep_out, theta, phi)
+        vp_out = scatter_particle(v_in, Ep_out, theta, phi)
 
-        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+        vs_out = scatter_particle(v_in, Es_out, theta, pi-phi)
     else
         #scatter isotrop: primary electron in unchanged
         vp_out = v_in/norm(v_in) * v_abs(Ep_out)
@@ -205,7 +205,7 @@ function scatter_elastic_O(v_in, E_exc = 0)
     phi = rand()*2*pi
     E_out = E_in
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -216,7 +216,7 @@ function scatter_inelastic_O(v_in, E_exc)
     phi = rand()*2*pi
     E_out = E_in - E_exc
     @assert E_out > 0
-    v_out = scatter(v_in, E_out, theta, phi)
+    v_out = scatter_particle(v_in, E_out, theta, phi)
     return v_out
 end
 
@@ -230,9 +230,9 @@ function scatter_ion_O(v_in, E_ionization)
     if Es_out > E_primary
         theta = pi/4
         phi = rand()*2*pi
-        vp_out = scatter(v_in, Ep_out, theta, phi)
+        vp_out = scatter_particle(v_in, Ep_out, theta, phi)
 
-        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+        vs_out = scatter_particle(v_in, Es_out, theta, pi-phi)
     else
         #scatter isotrop: primary electron in unchanged
         vp_out = v_in/norm(v_in) * v_abs(Ep_out)
@@ -263,9 +263,9 @@ function scatter_doubleion_O(v_in, E_ionization)
     if Es_out > E_primary
         theta = pi/4
         phi = rand()*2*pi
-        vp_out = scatter(v_in, Ep_out, theta, phi)
+        vp_out = scatter_particle(v_in, Ep_out, theta, phi)
 
-        vs_out = scatter(v_in, Es_out, theta, pi-phi)
+        vs_out = scatter_particle(v_in, Es_out, theta, pi-phi)
     else
         #scatter isotrop: primary electron in unchanged
         vp_out = v_in/norm(v_in) * v_abs(Ep_out)

@@ -5,6 +5,8 @@ using Distributions
 using LinearAlgebra
 using Revise 
 using Random
+using Profile
+using BenchmarkTools
 
 include("energy_secondary_e.jl")
 include("magnetic_field.jl")
@@ -14,23 +16,35 @@ include("ode_boris_mover.jl")
 #load cross sections
 include("cross_sections.jl")
 include("get_msis.jl")
-include("setup.jl")
+#include("setup.jl")
 
 
 #using GLMakie
 
 
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
     ##
     # initialize new electron
     
     # gyrocenter 
     lat_gmag = loc_gmag[1]
-    gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
-    #check altidute
-    @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
     
-    B0 = dipole_field_earth(gc0)
+    if b_model == "vertical"
+        #for vertical B:
+        gc0 = (c.re + alt0) .* [0, 0, 1]
+       #check altidute
+        @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+        B0 = zeros(3)
+        convergent_vertical_field!(B0, gc0)
+
+    elseif b_model == "dipole"
+        #for dipole field:
+        gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
+        #check altidute
+        @assert abs(alt0 - altitude(gc0)) < 10 #m        10m within target altitude is ok.
+        B0 = dipole_field_earth(gc0)
+    end
+    
     #create orthogonal vectorsystem along B0
     u1, u2, u3 = local_orthogonal_basis(B0)
 
@@ -49,14 +63,29 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
 
     r0_gyro = c.me * v0_perp / (c.qe * norm(B0))
 
+    #boris mover calculates velocities at half steps
+    #have v0 also at a half step, so gyrocenter remains centered on above defined gyrocenter
+    halfstep = pi / nPerGyro
+
     # calculate r0 and v0 in n1, n2 directions, and convert to original coordinate system
-    r_n1 =  cos(phase) * r0_gyro .* u1
-    r_n2 =  sin(phase) * r0_gyro .* u2
-    v_n1 = -sin(phase) * v0_perp .* u1
-    v_n2 =  cos(phase) * v0_perp .* u2
-    v_n3 =  v0_par .* u3
+    # subtract halfstep in angle, to account for boris mover half steps
+    r_n1 =  cos(phase - halfstep) * r0_gyro .* u1
+    r_n2 =  sin(phase - halfstep) * r0_gyro .* u2
     r0 = gc0 .+ r_n1 .+ r_n2
+
+
+    r_n1_hs =  cos(phase) * r0_gyro .* u1
+    r_n2_hs =  sin(phase) * r0_gyro .* u2
+    r0_hs = gc0 .+ r_n1_hs .+ r_n2_hs
+
+    convergent_vertical_field!(B0, r0_hs)
+    u1, u2, u3 = local_orthogonal_basis(B0)
+
+    v_n1 =  sin(phase) * v0_perp .* u1
+    v_n2 = -cos(phase) * v0_perp .* u2
+    v_n3 =  v0_par .* u3
     v0 = v_n1 .+ v_n2 .+ v_n3
+
 
     # alternatively, the offset from the gyrocenter can be calculated using
     # the cross product of v0, B0:
@@ -75,15 +104,15 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
 end
     
 
-function save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
-    open(joinpath(res_dir, "results.txt"), "a") do file
+function save_endpoint(res_file, r0, v0, status, r, v) #save status too?
+    open(res_file, "a") do file
         write(file, "$r0\t$v0\t$status\t$r\t$v\n")
     end
 end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_dir)
+function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
     #list of secondary electrons
     secondary_e = []
     
@@ -91,23 +120,27 @@ function propagate_electron(v0, r0, densityf, res_dir)
     r = r0
     E = E_ev(norm(v))
     status = -1 #undef
+    #status -1 will be retained if particle has low energy, such that the boris mover is not initiated
 
     #propagate electron until it runs out of energy to ionize
     while E > 12.072
-        r0v0 = [r; v]
+        #r0v0 = [r; v]
         #magnetic field handle for boris mover: (static field)
-        Bin(p) = dipole_field_earth(p)
+        #dipole field:
+        #Bin!(B, p) = dipole_field_earth!(B, p)
+        #conic field:
+        #Bin!(B, p) = convergent_vertical_field!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
-        status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf)
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r, v, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = false, nPerGyro = nPerGyro)
         E = E_ev(norm(v))
 
         if status == 1
             nothing
         elseif status == 2
             #record? do something?
-            println("Particle lost, recorded.\n")
-            save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
+            #println("Particle lost, recorded.\n")
+            #save_endpoint(res_file, r0, v0, status, r, v) #save status too?
             break
             #alternatively, check in while statement if state != 2
         elseif status == 0
@@ -123,8 +156,13 @@ function propagate_electron(v0, r0, densityf, res_dir)
         # after moving electron, scatter:
 
         # use cross sections of all scatter processes directly, not summed for each species
-        # thereby one random number decides directly which scattering process is triggered
+        # thereby one random number decides directly which scattering process is triggered 
+        #try
         ns = densityf(altitude(r))
+        #catch
+        #    print(r)
+        #    error()
+        #end       
         scatter_p = vcat((cs_all(E) .* ns)...)
         idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
 
@@ -143,12 +181,21 @@ function propagate_electron(v0, r0, densityf, res_dir)
         # get paramters for scattering:
         E_loss = sp_all[idx_scatter, 2]
         sc_f   = sp_all[idx_scatter, 6]
+
+        #ensure E_loss is not bigger than the kinetic energy
+        while E_loss > E_ev(norm(v))
+            idx_scatter = findfirst(cumsum(scatter_p) .> rand() * sum(scatter_p))
+            E_loss = sp_all[idx_scatter, 2]
+            sc_f   = sp_all[idx_scatter, 6]
+        end
+
         # scatter:
         out = 0
         try
             out = sc_f(v, E_loss)
         catch
-            print(r, v, idx_scatter)
+            print("r = ", r,"; v = ", v, "; idx_scatter = ", idx_scatter, "\n")
+            print("Ekin - E_loss = ", E_ev(norm(v)) - E_loss)
             error("boom")
         end
         """
@@ -182,63 +229,82 @@ function propagate_electron(v0, r0, densityf, res_dir)
     end
 
     # save end point and velocity of parent electron
-    save_endpoint(res_dir, r0, v0, status, r, v) #save status too?
+    save_endpoint(res_file, r0, v0, status, r, v) #save status too?
 
     # go through secondary electrons
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_dir)
+        propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
     end
 end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod)
-    lim_pitch = lim_pitch_deg/180*pi
-    
-    seed_value = round(Int, E0 + lim_pitch*100)
-    Random.seed!(seed_value)
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0)
 
-    # Results directory
-    res_dir = joinpath("results", "res_$(E0)eV_$(lim_pitch_deg)deg_" * string(now()))
-    mkdir(res_dir)
-    open(joinpath(res_dir, "results.txt"), "w") do file
-        write(file, "E0 = $E0\n")
-        write(file, "pitch limit = $lim_pitch_deg\n")
-        write(file, "Seed = $seed_value\n\n")
+    Bin!(B, p) = 0
+    if b_model == "dipole"
+        Bin!(B, p) = dipole_field_earth!(B, p)
+    elseif b_model == "vertical"
+        Bin!(B, p) = convergent_vertical_field!(B, p)
     end
+
+    # make sure all values are floats
+    E0 = Float64(E0)
+    alt0 = Float64(alt0)
+    lim_pitch_deg = Float64(lim_pitch_deg)
+    loc_gmag = Float64.(loc_gmag)
+    loc_geod = Float64.(loc_geod)
+    
+    #seed_value = round(Int, E0 + lim_pitch_deg)
+    seed_value = rand(Int)
+    Random.seed!(seed_value)
     
     hmin = 80e3     #m
     hmax = alt0+1e4 #m
-    intervals = 1e3 #m
-    hmsis = hmin:intervals:hmax
-    atm = atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
-    densityf_fast(alt) = atm[round(Int, (alt-hmin)/intervals+1), :]
+    hintervals = 1e3 #m
+    densityf = make_densityf(hmin, hmax, hintervals)
     #stack(densityf_fast.(hmsis))' == atm
     #    > true
 
     #hmsis = 80e3:1e3: #km
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
+    # Results directory    
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
+    open(res_file, "w") do file
+        write(file, "E0 = $E0\n")
+        write(file, "lim_pitch_deg = $lim_pitch_deg\n")
+        write(file, "seed_value = $seed_value\n")
+        write(file, "hmin = $hmin\n")
+        write(file, "hmax = $hmax\n")
+        write(file, "hintervals = $hintervals\n\n")
+    end
+    println("res_file = ", res_file)
     
+    lim_pitch = lim_pitch_deg/180*pi
+
     n_e_sim = 1
     
     while n_e_sim <= N_electrons
-        println("Electron number: ", n_e_sim)
+        #println("Electron number: ", n_e_sim)
         try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch)
-            propagate_electron(v0, r0, densityf_fast, res_dir)
-            n_e_sim = n_e_sim +1
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
+            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
         catch
             println("re-initiating electron")
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
+            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
         end
+    n_e_sim = n_e_sim +1
     end
     return nothing
 end
 
+
 #E0 = 4000 #eV
-#@time main(Int(E0), 10, alt0, lim_pitch, loc_gmag, loc_geod)
+#@time main(Int(E0), 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
 """
 using Distributed
 procs = addprocs(2)
@@ -287,20 +353,37 @@ arrows3d!(Point3(pp), Vec3(v0)./1e7, tipcolor = :blue, label = "v", tipradius = 
 axislegend()
 """
 
-
 """
 OPS = (trace = true,)
 status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
-rp = r .- r0
 zs = LinRange(0, 3, 200)
-meshscatter([tuple(p...) for p in eachcol(rp[:, 1321001:1321200])], markersize = 1, color = zs)
+meshscatter([tuple(p...) for p in eachcol(rp[:, 1:1000])], markersize = 1)#, color = zs)
+
+using GLMakie
+rp = r
+moving_average(vs,n) = [sum(vs[:, i:(i+n-1)], dims=2)/n for i in 1:(size(vs, 2)-(n-1))]
+rp_av = moving_average(rp, 200)
+f = Figure()
+ax = Axis3(f[1, 1])
+scatter!(ax, [tuple(p...) for p in eachcol(rp[:, 1:200])], markersize = 5)#, color = zs)
+scatter!(ax, [tuple(p...) for p in rp_av[1:200]], markersize = 5)#, color = zs)
+B = zeros(3)
+Bin!(B, rp_av[1])
+arrows3d!(Point3(rp_av[1][:]), Vec3(B.*1e9))
+arrows3d!(Point3(gc0), Vec3((r_n1 .+ r_n2)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((u1/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((u2/10)), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((v_n1 .+ v_n2)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3((v_n3)/5e2), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0_hs), Vec3((v0)/5e7), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+arrows3d!(Point3(r0), Vec3(convergent_vertical_field(r0).*5e9), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
+#ax.aspect = (1, 1, 10)
 
 
 tt = rvt[7, :]
 altitude = [norm(p) - c.re for p in eachcol(r)]
 lines(t, altitude)
 """
-
 
 """
 function plot_local_v(r, v, Bin)
@@ -348,3 +431,37 @@ hist([findfirst(cumsum(scatter_p) .> r_scatter) for r_scatter in rand(nsample).*
     )
 """
 
+
+"""
+
+using HDF5
+res_dir = joinpath("results")
+num_results = floor(Int, N_electrons * E0 / 35 * 1.1 ) #approximate number of electrons
+mkdir(res_dir)
+h5open(joinpath(res_dir, "results.h5"), "w") do file
+    file["E0"] = E0
+    file["lim_pitch_deg"] = pitch_limits_deg
+    file["seed_value"] = seed_value
+    file["results"] = zeros(0, num_results)  # Preallocate an array of size 10
+end
+
+data = ["lala", [1, 2, 3], 0.1]
+
+function save_data(res_dir, data)
+    i = 2
+    h5open(joinpath(res_dir, "results.h5"), "r+") do file
+        file["results"][i] = data  # Update the i-th element
+    end
+    nothing
+end
+save_data(res_dir, data)
+
+
+function load_data(res_dir)
+    return load(joinpath(res_dir, "results.jld2"))
+end
+
+d = load_data(res_dir)
+d["results"]
+
+"""

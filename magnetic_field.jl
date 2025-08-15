@@ -1,5 +1,97 @@
 using LinearAlgebra
+using StaticArrays
+include("constants.jl")
 
+
+function make_convergent_vertical_field_demo(c)
+    z0 = (c.re + 80e3) #z0 at 80km above earth radius
+    c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
+    dBdz = -6*c1 / z0^4 * 2e3                               #factor 2e3
+    function convergent_vertical_field!(B, p)
+        B[1] = 1/2 * p[1] * dBdz
+        B[2] = 1/2 * p[2] * dBdz
+        B[3] = -c1*2 / p[3]^3 
+        nothing
+    end
+
+    function convergent_vertical_field(p)
+        B = [1/2 * p[1] * dBdz, 
+             1/2 * p[2] * dBdz,
+             -c1*2 / p[3]^3 ]
+        return B
+    end
+    return convergent_vertical_field!, convergent_vertical_field
+end
+
+
+convergent_vertical_field_demo!, convergent_vertical_field_demo = make_convergent_vertical_field_demo(c)
+"""
+zz = [100, 200, 300, 400, 500]*1e3 .+ 500e3
+yy = [-200, -100, 0, 100, 200.0] .*2
+using GLMakie
+p = [Point3([0, y, z]) for y in yy for z in zz]
+v = Vec3.(convergent_vertical_field_demo.(p))
+f = arrows3d(p, v, lengthscale = 1e6, axis=(type=Axis3, azimuth = 0, elevation = 0),)
+save("figures/conicB.png", f)
+"""
+
+function make_convergent_vertical_field(c)
+    z0 = (c.re + 80e3) #z0 at 80km above earth radius
+    c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
+    dBdz = -6*c1 / z0^4
+    function convergent_vertical_field!(B, p)
+        B[1] = 1/2 * p[1] * dBdz
+        B[2] = 1/2 * p[2] * dBdz
+        B[3] = -c1*2 / p[3]^3 
+        nothing
+    end
+
+    function convergent_vertical_field(p)
+        B = [1/2 * p[1] * dBdz, 
+             1/2 * p[2] * dBdz,
+             -c1*2 / p[3]^3 ]
+        return B
+    end
+    return convergent_vertical_field!, convergent_vertical_field
+end
+
+convergent_vertical_field!, convergent_vertical_field = make_convergent_vertical_field(c)
+
+
+
+function dipole_field_earth!(B, p)
+    vm = @SVector [0, 0, -8.22e15] # Tm3
+    dipole_field!(B, p, vm)
+    nothing
+end
+
+function dipole_field!(B, p, vm)
+    #so far the fastest!
+    r = norm(p)
+    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    nothing
+end
+
+"""
+B = @MArray zeros(Float64, 3)
+p = @MArray rand(3)
+@btime dipole_field_earth!(B, p)
+"""
+
+
+
+"""
+
+function make_dipole_field_earth()
+    vm = [0, 0, -8.22e15] # Tm3
+    function dipole_field_earth!(B::Vector{Float64}, p::Vector{Float64})
+        dipole_field!(B, p, vm)
+        nothing
+    end
+    return dipole_field_earth!
+end
+
+"""
 
 function dipole_field_earth(p::Vector{Float64})
     vm = [0, 0, -8.22e15] # Tm3
@@ -7,12 +99,15 @@ function dipole_field_earth(p::Vector{Float64})
 end
 
 
-function dipole_field_earth!(B::Vector{Float64}, p::Vector{Float64})
-    vm = [0, 0, -8.22e15] # Tm3
-    dipole_field!(B, p, vm)
-    nothing
+function dipole_field(p::Vector{Float64}, vm::Vector{Float64})
+    #so far the fastest!
+    r = norm(p)
+    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    return B
 end
 
+
+"""
 
 function dipole_field_(p, vm)
     # p - point to calculate the magnetic field
@@ -36,31 +131,13 @@ function dipole_field_(p, vm)
     return B
 end
 
+#B = Vector{Float64}(undef, 3)
 
-B = Vector{Float64}(undef, 3)
-
-function dipole_field(p, vm)
-    # with the norm
+function dipole_field!(B::Vector{Float64}, p::Vector{Float64}, vm::Vector{Float64})
+    #so far the fastest!
     r = norm(p)
-    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2)
-    return B
-end
-function dipole_field(r, p, vm)
-    # without the norm
-    B = 1/r^5 * (3* p * dot(p, vm) - vm * r^2)
-    return B
-end
-
-function dipole_field!(B, r, p, vm)
-    # without the norm
-    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2)
-    return nothing
-end
-function dipole_field!(B, p, vm)
-    # with the norm
-    r = norm(p)
-    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2)
-    return nothing
+    B .= 1/r^5 * (3* p * dot(p, vm) - vm * r^2) 
+    nothing
 end
 
 using BenchmarkTools
@@ -85,7 +162,7 @@ r = norm(p)
 @btime dipole_field!(B, r, p, vm)   #36ns
 @btime dipole_field!(B, p, vm)      # 34ns
 
-"""
+
 function dipole_field4(p, vm)
 
     r = norm(p)
