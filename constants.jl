@@ -14,6 +14,7 @@ vm = [0, 0, -8.22e15] # Tm3
 ,
 )
 
+
 function makeE_ev(c)
     function E_ev(v_abs::Float64)
         # energy in eV of an electron travelling with |v| = v_abs
@@ -41,6 +42,10 @@ function make_altitude(c)
         return norm(r) - c.re
     end
     return altitude
+end
+function v_abs(E_ev, c)
+    # velocity of an electron with kinetic energy E_ev
+    return sqrt(E_ev * c.qe * 2 / c.me)
 end
 
 altitude = make_altitude(c)

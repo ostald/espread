@@ -116,8 +116,8 @@ function dipole_field_(p, vm)
     #       vm = [0, 0, vm_z] with vm_z = mu_0 m / 4 pi ≈ m * 1e-7
     #           with m - magnetic dipole moment, m = 8.22e22 Am-2 for earth
 
-    #returns B - magnetic field vector 
-    #               at point p 
+    #returns B - magnetic field vector
+    #               at point p
     #               of a magnetic moment vm
     #               assuming vm is at origin coordinate system
 
@@ -131,7 +131,6 @@ function dipole_field_(p, vm)
     return B
 end
 
-
 #B = Vector{Float64}(undef, 3)
 
 function dipole_field!(B::Vector{Float64}, p::Vector{Float64}, vm::Vector{Float64})
@@ -141,12 +140,33 @@ function dipole_field!(B::Vector{Float64}, p::Vector{Float64}, vm::Vector{Float6
     nothing
 end
 
+using BenchmarkTools
+# With normal vectors
+B = zeros(3)
+vm = [0, 0, -8.22e15] # Tm3
+p = rand(3)
+r = norm(p)
+@btime dipole_field(p, vm)      # 219ns
+@btime dipole_field(r, p, vm)   # 236ns
+@btime dipole_field!(B, r, p, vm)   # 235ns
+@btime dipole_field!(B, p, vm)      # 218ns
+
+using StaticArrays
+# With static arrays/vectors
+B = @MArray zeros(3)
+vm = @MArray [0, 0, -8.22e15] # Tm3
+p = @MArray rand(3)
+r = norm(p)
+@btime dipole_field(p, vm)      # 40ns
+@btime dipole_field(r, p, vm)   # 41ns
+@btime dipole_field!(B, r, p, vm)   #36ns
+@btime dipole_field!(B, p, vm)      # 34ns
 
 
 function dipole_field4(p, vm)
 
     r = norm(p)
-    B = 1/r^5 * (3* p * dot(p, vm)) - vm / r^3 
+    B = 1/r^5 * (3* p * dot(p, vm)) - vm / r^3
 
     return B
 end
