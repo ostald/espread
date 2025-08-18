@@ -19,6 +19,14 @@ for r in runs
     
     #f = files[2]
     for (id, f) in enumerate(files)
+        data = load(dir * f)
+        all_keys = collect(keys(data))
+        df_keys = filter(x-> !contains(x, "setup"), all_keys)
+
+        df = vcat([data[k] for k in df_keys]...)
+        unique(df)
+
+        """
         df = CSV.read(open(joinpath(dir, f)),
             header=false,
             delim = "\t",
@@ -30,11 +38,12 @@ for r in runs
         df.v0 = [eval(Meta.parse(value)) for value in df.v0]
         df.r  = [eval(Meta.parse(value)) for value in df.r]
         df.v  = [eval(Meta.parse(value)) for value in df.v]
+        """
         res[id] = df
     end
     df_comb = unique(vcat(res...))
     
-    jldsave(joinpath(dir, r * ".jld2"); df_comb)
+    #jldsave(joinpath(dir, r * ".jld2"); df_comb)
 
 end
 
@@ -90,10 +99,11 @@ fig, ax, his = hist(df.alt./1e3,
 display(fig)
 save(joinpath("results", "hist_ionizations_height.png"), fig)
 
+
 # 3d point plot of endpoints (earth centered coordinates)
 fig = Figure()
-ax = Axis3(fig[1, 1], aspect=(1, 1, 1))
-sc = scatter!(ax,Point3.(df.pos), markersize = 2)#, 
+ax = Axis3(fig[1, 1], aspect=(1, 1, 1),)
+sc = scatter!(ax,Point3.(df.pos), markersize = 2)#,
     #axis=(limits=(nothing, nothing, nothing),),)
 #zlims!(ax, 5.99e6, 6.01e6)
 #ylims!(ax, 2.465e6, 2.48e6)

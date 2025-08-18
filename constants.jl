@@ -43,9 +43,12 @@ function make_altitude(c)
     end
     return altitude
 end
+
+"""
 function v_abs(E_ev, c)
     # velocity of an electron with kinetic energy E_ev
     return sqrt(E_ev * c.qe * 2 / c.me)
 end
+"""
 
 altitude = make_altitude(c)

@@ -282,8 +282,8 @@ function scatter_doubleion_O(v_in, E_ionization)
 end
 
 
-function record_secondary(r, vs_out, secondary_e)
-    secondary_e = [secondary_e..., [r, vs_out]]
+function record_secondary(r, vs_out, secondary_e, idx_scatter)
+    secondary_e = [secondary_e..., [r, vs_out, idx_scatter]]
     return secondary_e 
 end
 

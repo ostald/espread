@@ -17,10 +17,11 @@ for batch in 1:100
     end
 end
 
-"""
+
 include("setup.jl")
 mkdir(res_dir)
 include("espread.jl")
+batch = 0
 @profview main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro)
 """
 

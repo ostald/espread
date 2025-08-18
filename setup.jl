@@ -3,8 +3,8 @@
 using Dates
 
 #magnetic field model
-#b_model = "vertical"
-b_model = "dipole"
+b_model = "vertical"
+#b_model = "dipole"
 
 # Define initial energy
 E0 = 1e4 #eV

@@ -7,6 +7,9 @@ using Revise
 using Random
 using Profile
 using BenchmarkTools
+using JLD2
+using DataFrames
+using Serialization
 
 include("energy_secondary_e.jl")
 include("magnetic_field.jl")
@@ -22,7 +25,7 @@ include("get_msis.jl")
 #using GLMakie
 
 
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
     ##
     # initialize new electron
     
@@ -93,6 +96,14 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     dr = sum(r[:, 1:nPerGyro], dims = 2) ./ nPerGyro
     dr[3] = 0
     r0 = r0 - dr[:]
+    if b_model == "dipole"
+        error("correction of gyrocenter not handled for dipole field. \
+            easiest solution might be to simply not correct for it, as the \
+            halfstep correction is already done. the remaining difference is not large, \
+            but should be further investigated for the case of the dipole field")
+    end
+
+
 
     """
     using GLMakie
@@ -116,7 +127,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     arrows3d!(Point3(r0), Vec3(convergent_vertical_field(r0).*5e9), tipradius = 0.034, tiplength = 0.1, shaftradius = 0.015)
     #ax.aspect = (1, 1, 10)
     """
-    
+
     # alternatively, the offset from the gyrocenter can be calculated using
     # the cross product of v0, B0:
     #r0_2 = gc0 .- c.me * cross(v0, B0) / (c.qe * norm(B0)^2)
@@ -134,15 +145,15 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
 end
     
 
-function save_endpoint(res_file, r0, v0, status, r, v) #save status too?
+function save_endpoint(res_file, generation, r0, v0, status, r, v) #save status too?
     open(res_file, "a") do file
-        write(file, "$r0\t$v0\t$status\t$r\t$v\n")
+        write(file, "$generation\t$r0\t$v0\t$status\t$r\t$v\n")
     end
 end
 
 
 ##
-function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
+function propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
     #list of secondary electrons
     secondary_e = []
     
@@ -245,7 +256,7 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
         else #elseif sp_all[idx_scatter, 3] == 1 #ionising collisions
             vp_out, vs_out = out
             v = vp_out
-            secondary_e = record_secondary(r, vs_out, secondary_e)
+            secondary_e = record_secondary(r, vs_out, secondary_e, idx_scatter)
         #else #double-ionising collisions not permitted as of now
         #    vp_out, vs1_out, vs2_out = out
         #    v = vp_out
@@ -259,14 +270,19 @@ function propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
     end
 
     # save end point and velocity of parent electron
-    save_endpoint(res_file, r0, v0, status, r, v) #save status too?
+    #save_endpoint(res_file, generation, r0, v0, status, r, v) #save status too?
+
+    record = [record..., [generation, idx_scatter, r0, v0, status, r, v]]
 
     # go through secondary electrons
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
+        idx_scatter = se[3]
+        record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation+1, record)
     end
+
+    return record
 end
 
 
@@ -302,32 +318,105 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
     # Results directory    
-    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
-    open(res_file, "w") do file
-        write(file, "E0 = $E0\n")
-        write(file, "lim_pitch_deg = $lim_pitch_deg\n")
-        write(file, "seed_value = $seed_value\n")
-        write(file, "hmin = $hmin\n")
-        write(file, "hmax = $hmax\n")
-        write(file, "hintervals = $hintervals\n\n")
+    """
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".bin")
+    open(res_file, "w") do io
+        serialize(io,
+        [E0,
+        lim_pitch_deg,
+        seed_value,
+        hmin,
+        hmax,
+        hintervals])
     end
+    """
+
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".jld2")
+    jldopen(res_file, "w") do file
+        setup = JLD2.Group(file, "setup")
+        setup["E0"] = E0
+        setup["lim_pitch_deg"] = lim_pitch_deg
+        setup["seed_value"] = seed_value
+        setup["hmin"] = hmin
+        setup["hmax"] = hmax
+        setup["hinterval"] = hintervals
+    end
+
+    """
+    jldsave(res_file;
+        E0,
+        lim_pitch_deg,
+        seed_value,
+        hmin,
+        hmax,
+        hintervals)
+    """
+
+    #res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
+    #open(res_file, "w") do file
+    #    write(file, "E0 = $E0\n")
+    #    write(file, "lim_pitch_deg = $lim_pitch_deg\n")
+    #    write(file, "seed_value = $seed_value\n")
+    #    write(file, "hmin = $hmin\n")
+    #    write(file, "hmax = $hmax\n")
+    #    write(file, "hintervals = $hintervals\n\n")
+    #end
     println("res_file = ", res_file)
     
     lim_pitch = lim_pitch_deg/180*pi
 
     n_e_sim = 1
+
+    #partricle generation (1 for primaries, 2 for secondaries etc)
+    generation = 1
+    idx_scatter = -1
+
     
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
+        record = []
+
         try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
-            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
+            record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
         catch
             println("re-initiating electron")
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro)
-            propagate_electron(v0, r0, densityf, res_file, c, Bin!, nPerGyro)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
+            record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
         end
-    n_e_sim = n_e_sim +1
+        
+        df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
+        for rr in record
+            push!(df, rr)
+        end
+
+        name = lpad(n_e_sim, 5, "0")
+
+        #saving 
+        jldopen(res_file, "a+") do file # open read/write, preserving contents of existing file or creating a new file
+            file[name] = df
+        end
+        #data = load(res_file)
+
+
+        """
+        open(res_file, "a+") do io
+            serialize(io, df)
+        end
+
+        io = open(res_file, "r")
+        record = deserialize(io)
+        close(io)
+        """
+
+        #df_dict = load(res_file)
+        #df = df_dict["df"]
+        
+        #open(res_file, "a") do file
+        #    write(file, "$res\n")
+        #end
+
+        n_e_sim = n_e_sim +1
     end
     return nothing
 end
@@ -388,7 +477,7 @@ OPS = (trace = true,)
 status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
 zs = LinRange(0, 3, 200)
 meshscatter([tuple(p...) for p in eachcol(rp[:, 1:1000])], markersize = 1)#, color = zs)
-"""
+
 
 using GLMakie
 rp = r
