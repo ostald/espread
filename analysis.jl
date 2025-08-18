@@ -23,7 +23,7 @@ for r in runs
         all_keys = collect(keys(data))
         df_keys = filter(x-> !contains(x, "setup"), all_keys)
 
-        df = vcat([data[k] for k in df_keys]...)
+        df = vcat([data[k] for k in sort(df_keys)]...)
         unique(df)
 
         """
