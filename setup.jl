@@ -39,7 +39,7 @@ loc_geod = loc_geod_deg ./ 180 * pi
 name = "conicB_run2_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 200 
+nprocesses = 200
 
 
 

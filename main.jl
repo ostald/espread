@@ -17,7 +17,7 @@ for batch in 1:100
     end
 end
 
-
+"""
 include("setup.jl")
 mkdir(res_dir)
 include("espread.jl")
@@ -27,11 +27,13 @@ batch = 0
 
 # kill all workers:
 #rmprocs(Distributed.workers(), waitfor = 1)
+
 """
-for i in workers()
-    w = Distributed.worker_from_id(i)
-    kill(w.config.process, Base.SIGKILL)
-end
+#for i in workers()
+#    w = Distributed.worker_from_id(i)
+#    #kill(w.config.process, Base.SIGKILL)
+#end
 """
+
 # check on silent failure:
 # Distributed.worker_from_id(2)
