@@ -50,6 +50,14 @@ end
 df_dict = load(joinpath(dir, "res_1000.0eV_20.0deg.jld2"))
 df = unique(df_dict["df_comb"])
 
+res_file = "results/conicB_run2_2025-08-26T11:19:42.742/res_10000.0eV_20.0deg_000.bin"
+df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
+io = open(res_file, "r")
+E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
+while !eof(io)
+    push!(df, deserialize(io))
+end
+close(io)
 
 
 # check for fails in Boris mover:

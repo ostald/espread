@@ -145,15 +145,16 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
 end
     
 
-function save_endpoint(res_file, generation, r0, v0, status, r, v) #save status too?
-    open(res_file, "a") do file
-        write(file, "$generation\t$r0\t$v0\t$status\t$r\t$v\n")
-    end
+function save_endpoint(io, generation, idx_scatter_rec, r0, v0, status, r, v) #save status too?
+    serialize(io, [generation, idx_scatter_rec, r0, v0, status, r, v])
+    #open(res_file, "a") do file
+    #    write(file, "$generation\t$r0\t$v0\t$status\t$r\t$v\n")
+    #end
 end
 
 
 ##
-function propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
+function propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
     #list of secondary electrons
     secondary_e = []
     
@@ -270,19 +271,19 @@ function propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nP
     end
 
     # save end point and velocity of parent electron
-    #save_endpoint(res_file, generation, r0, v0, status, r, v) #save status too?
+    save_endpoint(io, generation, idx_scatter_rec, r0, v0, status, r, v) #save status too?
 
-    record = [record..., [generation, idx_scatter, r0, v0, status, r, v]]
+    #record = [record..., [generation, idx_scatter_rec, r0, v0, status, r, v]]
 
     # go through secondary electrons
     for se in secondary_e
         r0 = se[1]
         v0 = se[2]
-        idx_scatter = se[3]
-        record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation+1, record)
+        idx_scatter_rec = se[3]
+        propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation+1)
     end
-
-    return record
+    nothing
+    #return record
 end
 
 
@@ -318,7 +319,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
     # Results directory    
-    """
+    
     res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".bin")
     open(res_file, "w") do io
         serialize(io,
@@ -329,8 +330,8 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         hmax,
         hintervals])
     end
+    
     """
-
     res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".jld2")
     jldopen(res_file, "w") do file
         setup = JLD2.Group(file, "setup")
@@ -342,7 +343,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         setup["hinterval"] = hintervals
     end
 
-    """
+    
     jldsave(res_file;
         E0,
         lim_pitch_deg,
@@ -369,33 +370,33 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
     #partricle generation (1 for primaries, 2 for secondaries etc)
     generation = 1
-    idx_scatter = -1
+    idx_scatter_rec = -1
 
-    
+    io = open(res_file, "a")
     while n_e_sim <= N_electrons
         #println("Electron number: ", n_e_sim)
-        record = []
+        #record = []
 
         try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
-            record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
+            propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
         catch
             println("re-initiating electron")
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
-            record = propagate_electron(v0, r0, idx_scatter, densityf, res_file, c, Bin!, nPerGyro, generation, record)
+            propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
         end
         
-        df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
-        for rr in record
-            push!(df, rr)
-        end
+        #df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
+        #for rr in record
+        #    push!(df, rr)
+        #end
 
-        name = lpad(n_e_sim, 5, "0")
+        #name = lpad(n_e_sim, 5, "0")
 
         #saving 
-        jldopen(res_file, "a+") do file # open read/write, preserving contents of existing file or creating a new file
-            file[name] = df
-        end
+        #jldopen(res_file, "a+") do file # open read/write, preserving contents of existing file or creating a new file
+        #    file[name] = df
+        #end
         #data = load(res_file)
 
 
@@ -418,6 +419,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
         n_e_sim = n_e_sim +1
     end
+    close(io)
     return nothing
 end
 
