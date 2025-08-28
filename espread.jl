@@ -320,7 +320,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
     # Results directory    
     
-    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".bin")
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")* ".bin")
     open(res_file, "w") do io
         serialize(io,
         [E0,
@@ -332,7 +332,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     end
     
     """
-    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")* ".jld2")
+    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")* ".jld2")
     jldopen(res_file, "w") do file
         setup = JLD2.Group(file, "setup")
         setup["E0"] = E0
@@ -353,7 +353,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         hintervals)
     """
 
-    #res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 3, "0")*".txt")
+    #res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")*".txt")
     #open(res_file, "w") do file
     #    write(file, "E0 = $E0\n")
     #    write(file, "lim_pitch_deg = $lim_pitch_deg\n")
