@@ -23,8 +23,6 @@ include("get_msis.jl")
 
 
 #using GLMakie
-
-
 function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
     ##
     # initialize new electron

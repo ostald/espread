@@ -1,9 +1,8 @@
+include("util.jl")
 include("setup.jl")
 mkdir(res_dir)
-current_commit = read(`git rev-parse HEAD`, String)
-open(joinpath(res_dir, "git_commit.txt"),"a") do io
-    println(io,"current_commit=",current_commit)
-end
+save_commit_hash(res_dir)
+
 
 using Distributed
 prcs = addprocs(nprocesses)
