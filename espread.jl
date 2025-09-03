@@ -49,8 +49,25 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     #create orthogonal vectorsystem along B0
     u1, u2, u3 = local_orthogonal_basis(B0)
 
-    pitch = rand()*lim_pitch    # random pitch angle within limits
-    phase = rand()*2*pi         # random phase angle
+    #pitch = rand()*lim_pitch    # random pitch angle within limits
+    #phase = rand()*2*pi         # random phase angle
+
+    pitch = acos.(1 .-rand()*(1-cos(lim_pitch)))
+    phase = rand()*2*pi
+
+    """
+    pitch = acos.(1 .-rand(10000)*(1-cos(pi/2)))
+    phase = rand(10000)*2*pi
+    x = [sin(t) * cos(p) for (t, p) in zip(pitch, phase)]
+    y = [sin(t) * sin(p) for (t, p) in zip(pitch, phase)]
+    z = [cos(t)          for (t, p) in zip(pitch, phase)]
+
+    # Flatten the arrays to create a list of points
+    points = [Point3(x[i], y[i], z[i]) for i in 1:length(x)]
+
+    # Plot the points
+    fig, ax, sc = scatter(points, markersize = 1)#, color = :red)
+    """
 
     # starting velocity
     # energy must be float
