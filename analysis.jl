@@ -1,30 +1,56 @@
+using StatsBase
 using CSV
 using DataFrames
 using LinearAlgebra
 using JLD2
+using Serialization
+using CairoMakie
 include("constants.jl")
+include("magnetic_field.jl")
 
 #dir = "results/run1_2025-07-19T21:53:59.887/"
-dir = "results/conicB/"
+dir = "results/conicB_run3_2025-08-28T11:44:40.606/"
+if !isdir(joinpath(dir, "plots"))
+    mkdir(joinpath(dir, "plots"))
+end
+
 dir_con = readdir(dir)
+dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
-runs = unique([d[1:end-8] for d in dir_con])
+runs = unique([d[1:end-8] for d in dir_con_raw])
 
-for r in runs
-    #filter_crit = "res_1000.0eV_20.0deg"
-    filter_crit = r
-    files = filter(x-> contains(x, filter_crit), dir_con)
-    
-    res = Vector{Any}(undef, length(files))
+
+#for r in runs
+    #filter_crit = r
+    filter_crit = "res_8000.0eV_20.0deg"
+
+    files = filter(x-> contains(x, filter_crit), dir_con_raw)
+    files = files[1:10]
+
+    df = DataFrame(Generation = Int[],
+        idx_scatter = Int[], 
+        r0 = Vector{Float64}[], 
+        v0 = Vector{Float64}[], 
+        status = Int[], 
+        r = Vector{Float64}[], 
+        v = Vector{Float64}[])
+#    res = Vector{Any}(undef, length(files))
     
     #f = files[2]
     for (id, f) in enumerate(files)
-        data = load(dir * f)
-        all_keys = collect(keys(data))
-        df_keys = filter(x-> !contains(x, "setup"), all_keys)
+        io = open(joinpath(dir,  f), "r")
+        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
+        while !eof(io)
+            push!(df, deserialize(io))
+        end
+        close(io)
 
-        df = vcat([data[k] for k in sort(df_keys)]...)
-        unique(df)
+        #data = load(dir * f)
+        #all_keys = collect(keys(data))
+        #df_keys = filter(x-> !contains(x, "setup"), all_keys)
+
+        #df = vcat([data[k] for k in sort(df_keys)]...)
+        #unique(df)
 
         """
         df = CSV.read(open(joinpath(dir, f)),
@@ -39,18 +65,18 @@ for r in runs
         df.r  = [eval(Meta.parse(value)) for value in df.r]
         df.v  = [eval(Meta.parse(value)) for value in df.v]
         """
-        res[id] = df
+        #res[id] = df
     end
-    df_comb = unique(vcat(res...))
+    #df_comb = unique(vcat(res...))
     
-    #jldsave(joinpath(dir, r * ".jld2"); df_comb)
+    jldsave(joinpath(dir, r * ".jld2"); df)
 
 end
 
-df_dict = load(joinpath(dir, "res_1000.0eV_20.0deg.jld2"))
-df = unique(df_dict["df_comb"])
+#df_dict = load(joinpath(dir, "res_1000.0eV_20.0deg.jld2"))
+#df = unique(df_dict["df_comb"])
 
-res_file = "results/conicB_run2_2025-08-26T11:19:42.742/res_10000.0eV_20.0deg_000.bin"
+res_file = "results/conicB_run2_2025-08-26T12:50:35.891/res_8000.0eV_20.0deg_001.bin"
 df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
 io = open(res_file, "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
@@ -59,12 +85,18 @@ while !eof(io)
 end
 close(io)
 
-
+## sanity checks
 # check for fails in Boris mover:
 if size(filter(row -> :status .== 0, df))[1] > 0
     error("Failure of Boris mover!")
 end
 
+if !any(nonunique(df))
+    error("Dublicates found.")
+end
+
+
+## 
 df.E0 = E_ev.(norm.(df.v0))
 df.E_end = E_ev.(norm.(df.v))
 
@@ -72,29 +104,29 @@ df.E_end = E_ev.(norm.(df.v))
 filter(row -> row.E0 < 12.072 && row.status != -1, df)
 
 
-# primary electrons:
+## primary electrons:
 df.alt0 = altitude.(df.r0)
 df.alt_end = altitude.(df.r)
 df_alt0 = filter(:alt0 => x -> x > 599e3, df)
 
+#injection points of primaries:
 fig = Figure()
 ax = Axis3(fig[1, 1])
-scatter!(ax, Point3.(df_alt0.r0), markersize = 1)#, 
+scatter!(ax, Point3.(df_alt0.r0), markersize = 2)#, 
+display(fig)
+save(joinpath(dir, "plots", "r0_primary_e_$(E0)_$(lim_pitch_deg).png"), fig)
 
 
+##
 # select endpoint for primary electrons, starting point for secondary electrons
 df.alt = ifelse.(df.alt0 .> 599e3, df.alt_end, df.alt0)
-df.pos = ifelse.(df.alt0 .> 599e3, df.r, df.r0)
+df.pos_ce = ifelse.(df.alt0 .> 599e3, df.r, df.r0)
+df.pos = [p - [0, 0, c.re] for p in df.pos_ce]
 
-
-include("setup.jl")
-hmin = 80e3     #m
-hmax = alt0+1e4 #m
-intervals = 1e3 #m
-hmsis = hmin:intervals:hmax
+hmsis = hmin:hintervals:hmax
 
 #Altitude histogram
-using GLMakie
+#using GLMakie
 fig, ax, his = hist(df.alt./1e3,
     bins = hmsis./1e3, 
     direction=:x,
@@ -105,7 +137,8 @@ fig, ax, his = hist(df.alt./1e3,
         ),
     )
 display(fig)
-save(joinpath("results", "hist_ionizations_height.png"), fig)
+save(joinpath(dir, "plots", "hist_alt_$(E0)_$(lim_pitch_deg).png"), fig)
+
 
 
 # 3d point plot of endpoints (earth centered coordinates)
@@ -116,173 +149,340 @@ sc = scatter!(ax,Point3.(df.pos), markersize = 2)#,
 #zlims!(ax, 5.99e6, 6.01e6)
 #ylims!(ax, 2.465e6, 2.48e6)
 #xlims!(ax, -1.5e4/2, 1.5e4/2)
-
 display(fig)
+save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg).png"), fig)
+
 
 # zoom in by using smaller dataset
 filter_hmin = 150e3
-filter_hmax = 151e3
+filter_hmax = 161e3
 df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)
 
 # meshscatter keeps dimensions const
 fig, ax, ms = scatter(Point3.(df_filtered.pos), markersize = 1e1)
 display(fig)
 
+
 fig = Figure()
 ax = Axis3(fig[1, 1])
 scatter!(ax,Point3.(df_filtered.pos), markersize = 1e1)
 scatter!(ax,Point3(sum(df_filtered.pos)./size(df_filtered.pos, 1)), markersize = 1e1)
-
-# transform into field-aligned coordinates
-include("magnetic_field.jl")
-loc_gmag_deg = [66.73, 102.18]   # degrees lat, long, geomagnetic coord.
-loc_gmag = loc_gmag_deg ./ 180 * pi
-
-loc_geod_deg = [69.58, 19.23]
-loc_geod = loc_geod_deg ./ 180 * pi
-
-lat_gmag = loc_gmag[1]
-
-#straight up:
-gc = [(c.re + h) * [0, cos(lat_gmag), sin(lat_gmag)] for h in hmsis]
-    
-B0 = dipole_field_earth.(gc)
-[b/norm(b) for b in B0]
-
-or = [0, 0, 0.0]
-#fig = arrow(Point3(or), Vec3(B0[1]), alpha = 0.3)#, tipcolor = :red, label = "B/|B|")
-#arrows!(Point3(or), Vec3(B0[end]))
-#magnetic field cunrvature can be neglected
-
-#create orthogonal vectorsystem along B0, using B0 on top: B0[end]
-include("local_ortognal_basis.jl")
-u1, u2, u3 = local_orthogonal_basis(B0[end])
-
-origin = (c.re + hmsis[1]) * [0, cos(lat_gmag), sin(lat_gmag)]
-
-#convert into magnetic field aligned coordinates, using magnetic field on top
-mat = inv([u2 -u1 -u3])
-df.pos_fa = [mat * (p-origin) for p in  df.pos]
-df_filtered.pos_fa = [mat * (p-origin) for p in  df_filtered.pos]
-
-# figure shows 400m drift in y
-fig = Figure()
-ax = Axis3(fig[1, 1], aspect=(1, 1, 1))
-sc = scatter!(ax, Point3.(df_filtered.pos_fa)./1e3, markersize = 1)#, 
-    #axis=(limits=(nothing, nothing, nothing),),)
-#zlims!(ax, -2e5, -1e5)
-#ylims!(ax, -1.5e5, -0.5e5)
-#ylims!(ax, -3, 3)
 display(fig)
+save(joinpath(dir, "plots", "position_$(filter_hmin)-$(filter_hmax)km_$(E0)_$(lim_pitch_deg).png"), fig)
 
-meshscatter(Point3.(df_filtered.pos_fa), markersize = 1)
-#clearly slanted
 
-#trace entire fiedline, for better correction:
-#start with B0 at starting point:
-lat_gmag = loc_gmag[1]
-gc0 = (c.re + alt0) .* [0, cos(lat_gmag), sin(lat_gmag)]
-B0 = dipole_field_earth(gc0)
-#create orthogonal vectorsystem along B0
-u1, u2, u3 = local_orthogonal_basis(B0)
 
-function trace_fieldline(p0, fB)
-    p = p0
-    B = fB(p0)
-    p_next = Vector(undef, Int(1e6))
-    p_next[1] = p
-    B_save = Vector(undef, Int(1e6))
-    B_save[1] = B
-    ii = 1
-    while altitude(p) > 0
-        ii = ii + 1
-        p = p + B/norm(B)*1 #m steps
-        B = fB(p)
-        p_next[ii] = p
-        B_save[ii] = B
+
+
+# investigate phase angle
+# first make sure the magntic field line tracing from the gyrocenter is centered at [0, 0]
+p0 = [0, 0, 600e3 + c.re]
+p_along_B = zeros(600_000, 3)
+
+p = p0
+for i in axes(p_along_B, 1)
+    p_along_B[i, :] = p
+    B = convergent_vertical_field(p)
+    p = p + B/norm(B)
+end
+
+if !iszero(p_along_B[:, 1:2][:])
+    error("path along fieldine is not centered to [0, 0]")
+end
+
+function phase_angle(p)
+    return atan(p[1], p[2])
+end
+
+df.phase = phase_angle.(df.pos)
+
+fig, ax, sc = scatter([Point2(p[1:2]) for p in df.pos], markersize = 2)
+save(joinpath(dir, "plots", "horizontal_scatter_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+function PolarHist(anglesRad, limits, title, colour, transparancy, graphposition)
+    binsRad = collect(-pi:pi/18:pi)
+
+    h = fit(Histogram, anglesRad, binsRad)
+    x = collect(h.edges[1])
+    y = convert.(Float64, h.weights)
+
+    f = Figure()
+    ax = PolarAxis(f[1, graphposition],
+        title="$title",
+        thetaticks=((collect(0:15:limits)) .* 2*pi ./ limits, string.(string.(collect(0:15:limits)), "°")),
+        #rticks=collect(0:10:ceil(maximum(y) / 10)*10)
+    )
+    thetalims!(ax, 0, 2*pi )
+    #rlims!(ax, 0, ceil(maximum(y) / 10) * 10)
+    for i in eachindex(y)
+        if y[i] > 0
+            CairoMakie.poly!(ax, [(0.0, 0.0), (x[i], y[i]), (x[i+1], y[i])], [1, 2, 3], strokewidth=1.5, strokecolor=:black, color=Makie.wong_colors()[colour], alpha=transparancy)
+        end
     end
-    return p_next[1:ii], B_save[1:ii]
+    return f
 end
-trace, B = trace_fieldline(gc0, dipole_field_earth)
-origin = trace[end]
-
-#visualize trace in original coord
-scatter(Point3.(trace))
-altitude.(trace)
+fig = PolarHist(df.phase, 360, "$E0 eV, $lim_pitch_deg deg", 1, 0.6, 1)
+fig
+save(joinpath(dir, "plots", "hist_phase_$(E0)_$(lim_pitch_deg).png"), fig)
 
 
-#df.nearest_trp = [findfirst(x -> x < altitude(p)-10000, altitude.(trace)) for p in df.pos]
+df.rdist = [norm(p[1:2]) for p in df.pos]
 
-#some functions to align every position along fieldine
-function align_to_B(B0, pos, origin)
-    u1, u2, u3 = local_orthogonal_basis(B0)
-    mat = inv([u2 -u1 -u3])
-    pos_fa = mat * (pos-origin)
-    return pos_fa
-end
- 
+maximum(df.alt - [p[3] for p in df.pos])
 
-df.pos
-trace
+minimum(df.alt)
 
-df.nearest_idx = [argmin([norm(t - pos) for t in trace]) for pos in df.pos]
 
-function project_on_line(pos, a, b)
-    #projects a vector pos on the closest point on a line,
-    #given by vecotrs a, b: line = a + c*b
-    # b must be unit vector
-    # with c a free parameter
-    return a - (dot((a - pos), b) * b)
-end
+h_bins = collect(80e3:10e3:600e3)
+r_bins = collect(0:1:40)
+p_bins = collect(-pi:pi/18:pi)
 
-function find_fa_pos(pos, idx)
-    a = trace[idx]
-    b = B[idx]/norm(B[idx])
-    nearest_pos_on_line = project_on_line(pos, a, b)
-    B0 = dipole_field_earth(nearest_pos_on_line)
-    return align_to_B(B0, pos, origin)
-end
+h_middle = h_bins[1:end-1] + diff(h_bins)/2
+r_middle = r_bins[1:end-1] + diff(r_bins)/2
+p_middle = p_bins[1:end-1] + diff(p_bins)/2
 
-df.pos_fa = [find_fa_pos(p, i) for (p, i) in zip(df.pos, df.nearest_idx)]
-df_filtered = filter(row -> row.alt > filter_hmin && row.alt < filter_hmax, df)
-meshscatter(Point3.(df_filtered.pos_fa), markersize = 1e1)
-display(current_figure())
+B = norm.([convergent_vertical_field([0, 0, h+c.re]) for h in h_middle])
+r_gyro_max = v_abs(E0) * c.me ./ (c.qe * B)
+lim_pitch = lim_pitch_deg /180 *pi
+v_perp_mean = (1-cos(lim_pitch)) * v_abs(E0) / lim_pitch
+r_gyro_mean = v_perp_mean * c.me ./ (c.qe * B)
+
+
+# Radial Distance - Height Histogram
+his_rh = fit(Histogram, (df.rdist, df.alt), (r_bins, h_bins))
+i_max_r_h = [argmax(h) for h in eachcol(his_rh.weights)]
+fig, ax, hm = heatmap(r_bins, h_bins/1e3, his_rh.weights,
+    colorscale = log10,
+    colorrange = (1, maximum(his_ph.weights)), lowclip = ("white", 0),
+    axis = (xlabel = "Radial Distance [m]", ylabel = "Height [km]", title = "$E0 eV, $lim_pitch_deg deg",
+        limits = (nothing, (50, 600)),)
+    )
+lines!(ax, r_middle[i_max_r_h], h_middle/1e3, color= "red", label = "Max Count")
+lines!(ax, r_gyro_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+Colorbar(fig[1, 2], hm, label="Counts [1]")
+axislegend(ax)
+fig
+save(joinpath(dir, "plots", "hist2d_rd_height_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+# Radial Distance - Height Histogram, normalized to areal density of radial bins
+his_rh = fit(Histogram, (df.rdist, df.alt), (r_bins, h_bins))
+area_r = (r_bins[2:end] .^2 - r_bins[1:end-1] .^2) * pi
+density_rh = his_rh.weights ./ area_r
+i_max_r_h = [argmax(h) for h in eachcol(density_rh)]
+fig, ax, hm = heatmap(r_bins, h_bins/1e3, density_rh,
+    colorscale = log10,
+    colorrange = (1, maximum(density_rh)), lowclip = ("white", 0),
+    axis = (xlabel = "Radial Distance [m]", ylabel = "Height [km]", title = "$E0 eV, $lim_pitch_deg deg",
+        limits = (nothing, (50, 600)),)
+    )
+lines!(ax, r_middle[i_max_r_h], h_middle/1e3, color= "red", label = "Max Count")
+lines!(ax, r_gyro_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+Colorbar(fig[1, 2], hm, label="Counts [1]")
+axislegend(ax)
+fig
+save(joinpath(dir, "plots", "hist2d_areaDensity_rd_height_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+# Phase - Heigth Histogram
+his_ph = fit(Histogram, (df.phase, df.alt), (p_bins, h_bins))
+fig, ax, hm = heatmap(p_bins, h_bins/1e3, his_ph.weights,
+    colorscale = log10,
+    colorrange = (1, maximum(his_ph.weights)), lowclip = ("white", 0),
+    axis = (xlabel = "Phase [rad]", ylabel = "Height [km]", title = "$E0 eV, $lim_pitch_deg deg",
+        limits = (nothing, (50, 600)),)
+    )
+Colorbar(fig[1, 2], hm, label="Counts [1]")
+fig
+save(joinpath(dir, "plots", "hist2d_phase_height_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+# Phase - Radial Distance Histogram, Polar plot
+his_pr = fit(Histogram, (df.phase, df.rdist), (p_bins, r_bins))
+i_max_r_p = [argmax(h) for h in eachrow(his_pr.weights)]
 
 fig = Figure()
-ax = Axis3(fig[1, 1], aspect=(1, 1, 1))
-sc = scatter!(ax, Point3.(df_filtered.pos_fa)./1e3, markersize = 1e1)#, 
-    #axis=(limits=(nothing, nothing, nothing),),)
-#zlims!(ax, -2e5, -1e5)
-#ylims!(ax, -1.5e5, -0.5e5)
-#ylims!(ax, -3, 3)
+ax = PolarAxis(fig[1, 2], title = "$E0 eV, $lim_pitch_deg deg",)
+p = voronoiplot!(ax, p_middle, r_middle, his_pr.weights,
+    colorscale = log10,
+    colorrange = (1, maximum(his_ph.weights)), lowclip = ("white", 0),
+    show_generators = false, strokewidth = 0)
+#rlims!(ax, 0.0, 10.5)
+l1 = lines!(ax, p_middle, r_middle[i_max_r_p], color= "red", label = "Max Count")
+Colorbar(fig[1, 3], hm, label="Counts [1]")
+Legend(fig[1, 1], [l1], ["Max Count"])
+fig
+save(joinpath(dir, "plots", "hist2d_phase_rd_$(E0)_$(lim_pitch_deg).png"), fig)
 
-display(fig)
-# slant reduced to 75m !!!
-# what does that mean????
+# Phase - Radial Distance Histogram, Cartesian
+fig, ax, hm = heatmap(p_bins, r_bins, his_pr.weights,
+    colorscale = log10,
+    colorrange = (1, maximum(his_ph.weights)), lowclip = ("white", 0),
+    axis = (xlabel = "Phase [rad]", ylabel = "Radial Distance [m]", title = "$E0 eV, $lim_pitch_deg deg",),)
+Colorbar(fig[1, 2], hm, label="Counts [1]")
+fig
+#save(joinpath(dir, "plots", "hist2d_v2_phase_rd_$(E0)_$(lim_pitch_deg).png"), fig)
+
+# Phase - Radial Distance Histogram, Polar plot, normalized to areal density 
+area_pr = [dr * dp / 2  for dp in diff(p_bins), dr in (r_bins[2:end] .^2 - r_bins[1:end-1] .^2)]
+density_pr = his_pr.weights ./ area_pr
+i_max_r_p = [argmax(h) for h in eachrow(density_pr)]
+
+fig = Figure()
+ax = PolarAxis(fig[1, 2], title = "$E0 eV, $lim_pitch_deg deg",)
+p = voronoiplot!(ax, p_middle, r_middle, density_pr,
+    colorscale = log10,
+    colorrange = (1, maximum(density_pr)), lowclip = ("white", 0),
+    show_generators = false, strokewidth = 0)
+#rlims!(ax, 0.0, 10.5)
+l1 = lines!(ax, p_middle, r_middle[i_max_r_p], color= "red", label = "Max Count")
+Colorbar(fig[1, 3], hm, label="Counts [1]")
+Legend(fig[1, 1], [l1], ["Max Count"])
+fig
+save(joinpath(dir, "plots", "hist2d_areaDensity_phase_rd_$(E0)_$(lim_pitch_deg).png"), fig)
 
 
-#trace electron to surface:
-include("ode_boris_mover.jl")
-include("espread.jl")
-n_mfp = 1
-E0 = 10000.0
-lim_pitch = 20/180*pi
-densityf(alt) = 0
-r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
-status, r, v, t = ode_boris_mover_mfp(n_mfp, [r0; v0], -c.qe, c.me, dipole_field_earth!, cs_all_sum, densityf)#; OPS = [])
-
-rp = [copy(c) for c in eachcol(r)]
-r_filtered = filter(x -> altitude(x) > filter_hmin && altitude(x) < filter_hmax, rp)
+#also do densities (divide by circumference) done
+#scattering depth instead of height? => no
+# countour of 1/e decay from max
 
 
-nearest_idx = [argmin([norm(t - pos) for t in trace]) for pos in r_filtered]
+#3D histogram in height, phase and radius
 
-B0 = [dipole_field_earth(pos) for pos in eachcol(r)]
-r_fa = [align_to_B(B[nearest_idx[i]], r[:, i], origin) for i in axes(r, 2)]
-sc = scatter!(ax, Point3.(r_fa)./1e3, markersize = 1e1)#, 
-zlims!(ax, 0, 500)
-ylims!(ax, 0, 3)
-xlims!(ax, -0.1, 0.1)
+his_hrp = fit(Histogram, (df.alt, df.rdist, df.phase), (h_bins, r_bins, p_bins))
 
 
-altitude(r[:, end])r
+# use slices to visualize, or sum along phase
+## Radial Phase plot
+h_ind = 4
+data = his_hrp.weights[h_ind, :, :]' 
+i_max = [argmax(d) for d in eachrow(data)]
+i_exp_hs = [findmin(abs.(d[i:end].-d[i]/exp(1)))[2] + i - 1 for (d, i) in zip(eachrow(data), i_max)]
+i_exp_ls = [findmin(abs.(d[1:i].-d[i]/exp(1)))[2] for (d, i) in zip(eachrow(data), i_max)]
+
+
+fig = Figure()
+ax = PolarAxis(fig[1:2, 1], title = "$E0 eV, $lim_pitch_deg deg, $(h_bins[4]/1e3)km",)
+p = voronoiplot!(ax, p_middle, r_middle, data,
+    colorscale = log10,
+    colorrange = (1, maximum(data)), lowclip = ("white", 0),
+    show_generators = false, strokewidth = 0)
+rlims!(ax, 0.0, 20.0)
+l1 = lines!(ax, p_middle, r_middle[i_max], color= "red", label = "Max Counts")
+l2 = lines!(ax, p_middle, r_middle[i_exp_hs], color= "red", linestyle = :dash, label = "1/e contour")
+l3 = lines!(ax, p_middle, r_middle[i_exp_ls], color= "red", linestyle = :dash, label = "1/e contour")
+l4 = lines!(ax, p_middle, fill(r_gyro_mean[h_ind], size(p_middle)), color= "black", linestyle = :dot, label = "Mean Gyroradius")
+Colorbar(fig[2, 2], hm, label="Counts [1]")
+Legend(fig[1, 2], [l1, l2, l4], ["Max Counts", "1/e contour", "Mean Gyroradius"])
+fig
+save(joinpath(dir, "plots", "hist3d_phase_rd_$(E0)_$(lim_pitch_deg)_$(h_bins[4]/1e3)km.png"), fig)
+
+
+## Radial Phase plot normalised density
+h_ind = 4
+data = his_hrp.weights[h_ind, :, :]' ./ area_pr
+i_max = [argmax(d) for d in eachrow(data)]
+i_exp_hs = [findmin(abs.(d[i:end].-d[i]/exp(1)))[2] + i - 1 for (d, i) in zip(eachrow(data), i_max)]
+i_exp_ls = [findmin(abs.(d[1:i].-d[i]/exp(1)))[2] for (d, i) in zip(eachrow(data), i_max)]
+
+
+fig = Figure()
+ax = PolarAxis(fig[1:2, 1], title = "$E0 eV, $lim_pitch_deg deg, $(h_bins[4]/1e3)km",)
+p = voronoiplot!(ax, p_middle, r_middle, data,
+    colorscale = log10,
+    colorrange = (1, maximum(data)), lowclip = ("white", 0),
+    show_generators = false, strokewidth = 0)
+rlims!(ax, 0.0, 20.0)
+l1 = lines!(ax, p_middle, r_middle[i_max], color= "red", label = "Max Density")
+l2 = lines!(ax, p_middle, r_middle[i_exp_hs], color= "red", linestyle = :dash, label = "Max Count")
+l3 = lines!(ax, p_middle, r_middle[i_exp_ls], color= "red", linestyle = :dash, label = "Max Count")
+l4 = lines!(ax, p_middle, fill(r_gyro_mean[h_ind], size(p_middle)), color= "black", linestyle = :dot, label = "Mean Gyroradius")
+Colorbar(fig[2, 2], hm, label="Density [1/m²]")
+Legend(fig[1, 2], [l1, l2, l4], ["Max Density", "1/e contour", "Mean Gyroradius"])
+fig
+save(joinpath(dir, "plots", "hist3d_density_phase_rd_$(E0)_$(lim_pitch_deg)_$(h_bins[4]/1e3)km.png"), fig)
+
+"""
+function find_ind_dist_width(data)
+    i_max = [argmax(d) for d in eachrow(data)]
+    i_hs = zeros(size(i_max))
+    i_hs = zeros(size(i_max))
+    for (d, i1) in zip(eachrow(data), i_max)
+        value, i2 = findmin(abs.(d[i1:end].-d[i1]/exp(1)))
+        i_hsi1 + i2
+    end
+"""
+
+## Radial - Height plot
+
+data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)
+i_max = [argmax(d) for d in eachrow(data)]
+i_exp_hs = [findmin(abs.(d[i:end].-d[i]/exp(1)))[2] + i - 1 for (d, i) in zip(eachrow(data), i_max)]
+i_exp_ls = [findmin(abs.(d[1:i].-d[i]/exp(1)))[2] for (d, i) in zip(eachrow(data), i_max)]
+
+fig, ax, hm = heatmap(r_bins, h_bins/1e3, data',
+    colorscale = log10,
+    colorrange = (1, maximum(data)), lowclip = ("white", 0),
+    axis = (xlabel = "Radial Distance [m]", ylabel = "Height [km]", title = "$E0 eV, $lim_pitch_deg deg",
+        limits = ((nothing, 20), (50, 600)),)
+    )
+lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Count")
+lines!(ax, r_middle[i_exp_hs], h_middle/1e3, color= "red", linestyle = :dash, label = "1/e contour")
+lines!(ax, r_middle[i_exp_ls], h_middle/1e3, color= "red", linestyle = :dash)#, label = "1/e contour")
+lines!(ax, r_gyro_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+Colorbar(fig[1, 2], hm, label="Counts [1]")
+axislegend(ax)
+fig
+save(joinpath(dir, "plots", "hist2d_rd_height_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+
+
+## Radial - Height plot normalised density
+area_r = (r_bins[2:end] .^2 - r_bins[1:end-1] .^2) * pi
+
+data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)' ./ area_r
+
+i_max = [argmax(d) for d in eachcol(data)]
+i_exp_hs = [findmin(abs.(d[i:end].-d[i]/exp(1)))[2] + i - 1 for (d, i) in zip(eachcol(data), i_max)]
+i_exp_ls = [findmin(abs.(d[1:i].-d[i]/exp(1)))[2] for (d, i) in zip(eachcol(data), i_max)]
+
+fig, ax, hm = heatmap(r_bins, h_bins/1e3, data,
+    colorscale = log10,
+    colorrange = (1, maximum(data)), lowclip = ("white", 0),
+    axis = (xlabel = "Radial Distance [m]", ylabel = "Height [km]", title = "$E0 eV, $lim_pitch_deg deg",
+        limits = ((nothing, 20), (50, 600)),)
+    )
+lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
+lines!(ax, r_middle[i_exp_hs], h_middle/1e3, color= "red", linestyle = :dash, label = "1/e contour")
+lines!(ax, r_middle[i_exp_ls], h_middle/1e3, color= "red", linestyle = :dash)#, label = "1/e contour")
+lines!(ax, r_gyro_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+Colorbar(fig[1, 2], hm, label="Density [1]")
+axislegend(ax)
+fig
+save(joinpath(dir, "plots", "hist2d_rd_height_$(E0)_$(lim_pitch_deg).png"), fig)
+
+
+
+
+# wideining at different heights
+# is the radial distribution a gaussian? chekc 
+# => check 1d (for statistics) but also 2D (use x, y coord instaed of polar)
+# vertical scattering depthof primaries?
+# comparison between runs
+# animation going through height of phase, read 
+
+data
+
+
+fig, ax, li = lines(r_middle, data[:, 4])
+
+for i in 1:length(h_middle)
+    lines!(ax, r_middle, data[:, i])
+end
+fig
