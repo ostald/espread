@@ -36,7 +36,7 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "conicB_run4_"
+name = "r4_conicB_"
 res_dir = joinpath("results", name * string(now()))
 
 nprocesses = 200

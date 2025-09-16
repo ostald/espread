@@ -5,9 +5,17 @@ save_commit_hash(res_dir)
 
 
 using Distributed
-prcs = addprocs(nprocesses)
+prcs = addprocs(nprocesses, env=["JULIA_WORKER_TIMEOUT" => "500"])
 
-@everywhere include("espread.jl")
+for p in workers()
+    remotecall(include, p, "espread.jl" )
+    sleep(10)
+end
+
+sleep(60)
+#@everywhere include("espread.jl")
+
+
 
 #global i_proc = 1
 for batch in 1:1000
@@ -20,7 +28,7 @@ for batch in 1:1000
     end
 end
 
-"""
+
 include("setup.jl")
 mkdir(res_dir)
 include("espread.jl")
@@ -34,7 +42,7 @@ batch = 0
 """
 #for i in workers()
 #    w = Distributed.worker_from_id(i)
-#    #kill(w.config.process, Base.SIGKILL)
+#    kill(w.config.process, Base.SIGKILL)
 #end
 """
 
