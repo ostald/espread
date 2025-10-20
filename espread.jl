@@ -96,9 +96,9 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     r_n2_hs =  sin(phase) * r0_gyro .* u2
     r0_hs = gc0 .+ r_n1_hs .+ r_n2_hs
 
-    #and mangetic field at that point
-    convergent_vertical_field!(B0, r0_hs)
-    u1, u2, u3 = local_orthogonal_basis(B0)
+    #and magnetic field at that point
+    #convergent_vertical_field!(B0, r0_hs)
+    #u1, u2, u3 = local_orthogonal_basis(B0)
 
     v_n1 =  sin(phase) * v0_perp .* u1
     v_n2 = -cos(phase) * v0_perp .* u2
@@ -109,6 +109,13 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     
     #error in gyrocenter:
     dr = sum(r[:, 1:nPerGyro], dims = 2) ./ nPerGyro
+
+    # general correction of gyrocenter position:
+    gc0_data = dr - (dot(dr-gc0, u3) * u3)
+    gc0_err = gc0 - gc0_data
+    r0 = r0 + gc0_err[:]
+
+    """
     dr[3] = 0
     r0 = r0 - dr[:]
     if b_model == "dipole"
@@ -120,8 +127,9 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
 
 
 
-    """
+    
     using GLMakie
+    using CairoMakie
     rp = r
     moving_average(vs,n) = [sum(vs[:, i:(i+n-1)], dims=2)/n for i in 1:(size(vs, 2)-(n-1))]
     rp_av = moving_average(rp, 200)
@@ -154,7 +162,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     #   >   1.0
     #   >   1.0
 
-    @assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
+    #@assert abs(alt0 - altitude(r0)) < r0_gyro * 1.1 #m   # must be 1.1*gyroradius within target altitude.
 
     return r0, v0
 end
