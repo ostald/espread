@@ -28,24 +28,33 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
     #files = files[1:10]
 
-    df = DataFrame(Generation = Int[],
-        idx_scatter = Int[], 
-        r0 = Vector{Float64}[], 
-        v0 = Vector{Float64}[], 
-        status = Int[], 
-        r = Vector{Float64}[], 
-        v = Vector{Float64}[])
 #    res = Vector{Any}(undef, length(files))
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
-    
+
+    df = DataFrame(generation = Int[],
+            idx_scatter = Int[], 
+            r0 = Vector{Float64}[], 
+            v0 = Vector{Float64}[], 
+            status = Int[], 
+            r = Vector{Float64}[], 
+            v = Vector{Float64}[])
+
     #f = files[2]
     @time for (id, f) in enumerate(files)
         io = open(joinpath(dir,  f), "r")
         E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
-        while !eof(io)
-            push!(df, deserialize(io))
+        data = [deserialize(io) for _ in 1:Int(1e6) if !eof(io)]
+
+        for d in data
+            push!(df, d)
         end
+        #df_arr[id] = df
+
+        #while !eof(io)
+        #    push!(df, deserialize(io))
+        #end
         close(io)
+
 
         #data = load(dir * f)
         #all_keys = collect(keys(data))
@@ -69,9 +78,10 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         """
         #res[id] = df
     end
+    #df = vcat(df_arr...)
     #df_comb = unique(vcat(res...))
     
-    jldsave(joinpath(dir, r * ".jld2"); df, E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals)
+    #@time jldsave(joinpath(dir, r * ".jld2"); df, E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, compress = false)
 
 #end
 #exit()

@@ -14,7 +14,7 @@ using Serialization
 include("energy_secondary_e.jl")
 include("magnetic_field.jl")
 include("constants.jl")
-include("local_ortognal_basis.jl")
+include("local_orthogonal_basis.jl")
 include("ode_boris_mover.jl")
 #load cross sections
 include("cross_sections.jl")
