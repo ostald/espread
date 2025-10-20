@@ -19,6 +19,8 @@ alt0 = 600e3 #m
 # Define pitch angle limits
 lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
+#Bin! = dipole_field_earth!
+#Bin! = convergent_vertical_field!
 
 pitch_limits_deg = [20, 90]
 
