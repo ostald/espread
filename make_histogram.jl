@@ -3,8 +3,9 @@ using StatsBase
 include("analysis_util.jl")
 include("constants.jl")
 
-if false 
+
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -49,7 +50,7 @@ for file in dir_con_raw
 
 
     #define histogram bins
-    h_edges = collect(80e3:10e3:600e3)
+    h_edges = collect(80e3:1e2:600e3)
     r_edges = collect(0:0.1:40)
     p_edges = collect(-pi:pi/36:pi)
 
@@ -63,13 +64,13 @@ for file in dir_con_raw
     end
 
 
-    z_edges = collect(80e3:10e3:600e3)
     x_edges = collect(-20.5:1:20.5)
     y_edges = copy(x_edges)
+    z_edges = collect(80e3:1e2:600e3)
 
-    z_middle = z_edges[1:end-1] + diff(z_edges)/2
     x_middle = x_edges[1:end-1] + diff(x_edges)/2
     y_middle = y_edges[1:end-1] + diff(y_edges)/2
+    z_middle = z_edges[1:end-1] + diff(z_edges)/2
 
     his_xyz = fit(Histogram, ([p[1] for p in df.pos], [p[2] for p in df.pos], [p[3] for p in df.pos]), (x_edges, y_edges, z_edges))
     open(joinpath(dir, "hist", "h_xyz_$(file[5:end-4]).hist"), "w") do io
@@ -77,9 +78,9 @@ for file in dir_con_raw
     end
 
 end
-end
 
-if false
+
+
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 if !isdir(joinpath(dir, "hist_summed"))
     mkdir(joinpath(dir, "hist_summed"))
@@ -112,5 +113,4 @@ for run in runs
     open(joinpath(dir, "hist_summed", run * "_summed.hist"), "w") do io
         serialize(io, [E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_summed])
     end
-end
 end
