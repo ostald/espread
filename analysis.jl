@@ -4,7 +4,7 @@ using DataFrames
 using LinearAlgebra
 using JLD2
 using Serialization
-using CairoMakie
+using WGLMakie
 using LsqFit
 include("constants.jl")
 include("magnetic_field.jl")
@@ -26,7 +26,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     filter_crit = "res_8000.0eV_20.0deg"
 
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
-    #files = files[1:10]
+    files = files[1:10]
 
 #    res = Vector{Any}(undef, length(files))
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
@@ -146,6 +146,9 @@ df.pos = [p - [0, 0, c.re] for p in df.pos_ce]
 
 hmsis = hmin:hintervals:hmax
 
+using WGLMakie
+WGLMakie.activate!()
+
 #Altitude histogram
 #using GLMakie
 fig, ax, his = hist(df.alt./1e3,
@@ -238,7 +241,7 @@ function PolarHist(anglesRad, limits, title, colour, transparancy, graphposition
     #rlims!(ax, 0, ceil(maximum(y) / 10) * 10)
     for i in eachindex(y)
         if y[i] > 0
-            CairoMakie.poly!(ax, [(0.0, 0.0), (x[i], y[i]), (x[i+1], y[i])], [1, 2, 3], strokewidth=1.5, strokecolor=:black, color=Makie.wong_colors()[colour], alpha=transparancy)
+            Makie.poly!(ax, [(0.0, 0.0), (x[i], y[i]), (x[i+1], y[i])], [1, 2, 3], strokewidth=1.5, strokecolor=:black, color=Makie.wong_colors()[colour], alpha=transparancy)
         end
     end
     return f
@@ -541,7 +544,8 @@ save(joinpath(dir, "plots", "hist2d_rd_height_$(E0)_$(lim_pitch_deg).png"), fig)
 # comparison between runs
 # animation going through height of phase, read 
 
-
+using CairoMakie
+CairoMakie.activate!()
 
 function gaussian(x, p0)
     A, std= p0
@@ -559,7 +563,7 @@ end
 
 
 
-for i in axes(h_middle, 1)
+#for i in axes(h_middle, 1)
     d = data[:, i]
     if sum(d) < 10
         continue
@@ -584,9 +588,21 @@ for i in axes(h_middle, 1)
     ff2 = curve_fit(sum_gaussian, r_middle, d, [ff.param ; ff.param[1]/10; ff.param[2]*2]; lower=lb)
     lines!(ax, -40:0.1:40, (sum_gaussian(-40:0.1:40, ff2.param)), label = "fit")
     axislegend(ax)
-    xlims!(ax, -20, 20)
+    #xlims!(ax, -20, 20)
     #save(joinpath(dir, "plots", "hist2d_rd_height_gaussfit_$(E0)_$(lim_pitch_deg)_$(h_middle[i]/1e3)km.png"), fig)
-    display(fig)
+    #display(fig)
+
+    dv = [dh*dr*dp /2 for dh in diff(h_bins), dr in diff(r_bins.^2), dp in diff(p_bins)]
+    data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)' ./ area_r
+    d = data[:, i]
+
+    boundary = (-20, 20)
+    npoints = 40
+    #kernel = :normal
+    bandwidth = 1.0
+    U = kde(d, boundary=boundary, npoints=npoints, bandwidth=bandwidth)
+    lines!(ax, U.x, U.density, color = "green", label = "KDE")
+
 end
 
 
