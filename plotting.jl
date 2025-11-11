@@ -6,20 +6,54 @@ dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
+runs = [
+    "h_hrp_500.0eV_20.0deg_summed.hist",
+    "h_hrp_500.0eV_90.0deg_summed.hist",
+    "h_hrp_1000.0eV_90.0deg_summed.hist",
+    "h_hrp_2000.0eV_20.0deg_summed.hist",
+    "h_hrp_2000.0eV_90.0deg_summed.hist",
+    "h_hrp_4000.0eV_20.0deg_summed.hist",
+    "h_hrp_4000.0eV_90.0deg_summed.hist",
+    "h_hrp_8000.0eV_20.0deg_summed.hist",
+    "h_hrp_8000.0eV_90.0deg_summed.hist",
+    "h_xyz_500.0eV_20.0deg_summed.hist",
+    "h_xyz_500.0eV_90.0deg_summed.hist",
+    "h_xyz_1000.0eV_20.0deg_summed.hist",
+    "h_xyz_1000.0eV_90.0deg_summed.hist",
+    "h_xyz_2000.0eV_20.0deg_summed.hist",
+    "h_xyz_2000.0eV_90.0deg_summed.hist",
+    "h_xyz_4000.0eV_20.0deg_summed.hist",
+    "h_xyz_4000.0eV_90.0deg_summed.hist",
+    "h_xyz_8000.0eV_20.0deg_summed.hist",
+    "h_xyz_8000.0eV_90.0deg_summed.hist",
+]
 runs_xyz = filter(x-> contains(x, "xyz"), runs)
 runs_xyz_20 = filter(x-> contains(x, "20.0deg"), runs_xyz)
 runs_xyz_90 = filter(x-> contains(x, "90.0deg"), runs_xyz)
 
+runs_hrp = filter(x-> contains(x, "hrp"), runs)
+runs_hrp_20 = filter(x-> contains(x, "20.0deg"), runs_hrp)
+runs_hrp_90 = filter(x-> contains(x, "90.0deg"), runs_hrp)
+
+# to do:
+# - rebinning
+# - normalization from counts to production density: be careful about radial bins!
+
+
+#for normalization!
+normalize(h, mode=:density)
+
 
 f = Figure()
+sleep(1)
 ax = Axis(f[1, 1], 
         xlabel = "Ionizations [1]",
         ylabel = "Height [km]",
         limits = ((1, 1e9), (80, 600)),
         xscale = log10,
+        title = "Ionizations vs Height 20 deg"
         )
 for r in runs_xyz_20
-#r = runs[1]
     println(r)
     dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
     io = open(joinpath(dir, "hist_summed", r), "r")
@@ -38,19 +72,19 @@ for r in runs_xyz_20
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-f
 save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f)
 
 
 f = Figure()
+sleep(1)
 ax = Axis(f[1, 1], 
         xlabel = "Ionizations [1]",
         ylabel = "Height [km]",
         limits = ((1, 1e9), (80, 600)),
         xscale = log10,
+        title = "Ionizations vs Height 90 deg"
         )
 for r in runs_xyz_90
-#r = runs[1]
     println(r)
     dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
     io = open(joinpath(dir, "hist_summed", r), "r")
@@ -69,19 +103,19 @@ for r in runs_xyz_90
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-f
 save(joinpath(dir, "plots", "hist_height_xyz_90deg_allE.png"), f)
 
 
 f = Figure()
+sleep(1)
 ax = Axis(f[1, 1], 
         xlabel = "Ionizations [1]",
         ylabel = "Height [km]",
         limits = ((1, 1e9), (80, 600)),
         xscale = log10,
+        title = "Ionizations vs Height"
         )
-for r in runs_xyz
-#r = runs[1]
+for (i, r) in enumerate(runs_xyz)
     println(r)
     dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
     io = open(joinpath(dir, "hist_summed", r), "r")
@@ -97,12 +131,17 @@ for r in runs_xyz
     z_middle = z_edges[1:end-1] + diff(z_edges)/2
 
     data = dropdims(sum(his_xyz.weights, dims = (1, 2)), dims = (1, 2))
-    lines!(ax, data, z_middle/1e3, label = "$E0 eV")
+    color = Makie.wong_colors()[ceil(Int, i/2)]
+    if lim_pitch_deg == 20.0
+        lines!(ax, data, z_middle/1e3, label = "$E0 eV, 20 deg",  color = color)
+    else
+        lines!(ax, data, z_middle/1e3, label = "$E0 eV, 90 deg", linestyle = :dash, color = color)
+    end
 end
-xlims!(ax, 1, 1e9)
 axislegend(ax)
-f
-save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f)
+save(joinpath(dir, "plots", "hist_height_xyz_allE.png"), f)
+
+
 
 
 #load histogram
