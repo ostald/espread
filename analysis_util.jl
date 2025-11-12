@@ -105,3 +105,14 @@ h = his_xyz
 new_edges = (h.edges[1], h.edges[2], filter(x -> mod(x, 1000) == 0, h.edges[3]))
 @time his_xyz_rebinned = rebin(his_xyz, new_edges);
 """
+
+
+function normalize_histogram_density(h::Histogram, volumes)
+    @assert(h.isdensity == false)
+    # normalise by density is the same as dividing by bin volume
+    # check:
+    #dv = [dx*dy*dz for dx in diff(x_edges), dy in diff(y_edges), dz in diff(z_edges)]
+    #his_xyz.weights ./ dv == (normalize(his_xyz, mode=:density)).weights
+    # >>> true
+    return Histogram(deepcopy(h.edges), h.weights ./ volumes, h.closed, true)
+end
