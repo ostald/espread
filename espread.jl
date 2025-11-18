@@ -52,7 +52,8 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     #pitch = rand()*lim_pitch    # random pitch angle within limits
     #phase = rand()*2*pi         # random phase angle
 
-    pitch = acos.(1 .-rand()*(1-cos(lim_pitch)))
+    #pitch = acos.(1 .-rand()*(1-cos(lim_pitch)))
+    pitch = acos.(1 .-rand()* 2* sin(lim_pitch)^2) #higher precision by avoiding subtraction
     phase = rand()*2*pi
 
     """
