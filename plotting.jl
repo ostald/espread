@@ -269,128 +269,150 @@ axs_prod = [Axis(f_hr_prod[row, col],
 [ax.xtickformat = values -> ["$(value)" for value in values] for ax in axs_prod[end, :]]
 [ax.ytickformat = values -> ["$(value)" for value in values] for ax in axs_prod[:, 1]]
 
+f_prod_r_h = Figure(size = (900, 1200))
+sleep(1)
+axs_r_h = [Axis(f_prod_r_h[row, col], 
+#    xlabel = "Radial Distance [m]", 
+#    ylabel = "Height [km]", 
+    limits = (nothing, (1e-4, 1e4)),
+    yscale = log10,
+    ytickformat = values -> ["" for value in values],
+    xtickformat = values -> ["" for value in values]
+    ) for row in 1:5, col in 1:2] 
+[ax.xtickformat = values -> ["$(value)" for value in values] for ax in axs_prod[end, :]]
+[ax.ytickformat = values -> ["$(value)" for value in values] for ax in axs_prod[:, 1]]
+
+#+    limits = (nothing, (1e-4, 1e4)), 
+#+    xlabel = "Radial Distance [m]", 
+#+    ylabel = "Production [1/m³]",
+ 
+heights = [105, 120, 140, 180, 250, 350, 500]
+
 hm_ion = nothing
 hm_prod = nothing
 
 for (i2, collection) in enumerate([runs_hrp_20, runs_hrp_90])
-for (i1, r) in enumerate(collection)
-#io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_20.0deg_summed.hist"), "r")
-io = open(joinpath(dir, "hist_summed", r), "r")
-E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
-close(io)
-@time his_hrp = rebin(his_hrp, (
-    filter(x -> mod(x, 1e4) == 0, his_hrp.edges[1]),
-    his_hrp.edges[2],
-    his_hrp.edges[3],
-    ))
+    for (i1, r) in enumerate(collection)
+        #io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_20.0deg_summed.hist"), "r")
+        io = open(joinpath(dir, "hist_summed", r), "r")
+        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
+        close(io)
+        @time his_hrp = rebin(his_hrp, (
+            filter(x -> mod(x, 1e4) == 0, his_hrp.edges[1]),
+            his_hrp.edges[2],
+            his_hrp.edges[3],
+            ))
 
-# compute bin volumes for normalization
-h_edges = his_hrp.edges[1]
-r_edges = his_hrp.edges[2]
-p_edges = his_hrp.edges[3]
-dv = [dh*dr2*dp /2 for dh in diff(h_edges), dr2 in diff(r_edges.^2), dp in diff(p_edges)]
-his_hrp_norm = normalize_histogram_density(his_hrp, dv)
+        # compute bin volumes for normalization
+        h_edges = his_hrp.edges[1]
+        r_edges = his_hrp.edges[2]
+        p_edges = his_hrp.edges[3]
+        dv = [dh*dr2*dp /2 for dh in diff(h_edges), dr2 in diff(r_edges.^2), dp in diff(p_edges)]
+        his_hrp_norm = normalize_histogram_density(his_hrp, dv)
+
+        #extract edges
+        h_edges = his_hrp.edges[1]
+        r_edges = his_hrp.edges[2]
+        p_edges = his_hrp.edges[3]
+        h_middle = h_edges[1:end-1] + diff(h_edges)/2
+        r_middle = r_edges[1:end-1] + diff(r_edges)/2
+        p_middle = p_edges[1:end-1] + diff(p_edges)/2
+
+        # compute gyroradius
+        include("magnetic_field.jl")
+        B = norm.([convergent_vertical_field([0, 0, h+c.re]) for h in h_middle])
+        r_gyro_h_max = v_abs(E0) * c.me ./ (c.qe * B)
+        lim_pitch = lim_pitch_deg /180 *pi
+        #mean_vperp_theory = (1/2 * lim_pitch - 1/4*sin(2*lim_pitch)) / (1-cos(lim_pitch))
+        mean_vperp_theory = (1/2 * lim_pitch - 1/4*sin(2*lim_pitch)) / (2 * sin(lim_pitch)^2) #higher precision by avoiding subtraction
+        B_top = convergent_vertical_field([0, 0, 600e3+c.re])
+        v_perp_mean = mean_vperp_theory * v_abs(E0)
+        r_gyro_mean = v_perp_mean * c.me ./ (c.qe * B)
+
+        mag_moment = c.me * (v_abs(E0)*sin(lim_pitch))^2 / (2 * norm(B_top))
+        v_perp_max_pitch_lim = sqrt.(mag_moment * 2 * B / c.me)
+        r_gyro_max_pitch_lim = v_perp_max_pitch_lim * c.me ./ (c.qe * B)
+
+        if lim_pitch_deg == 90
+            r_gyro_max_pitch_lim = v_abs(E0) * c.me ./ (c.qe * B)
+        end
+
+        if any(v_perp_max_pitch_lim .> v_abs(E0))
+            println("Mirroring $lim_pitch_deg deg")
+            #error()
+        end
+
+        # Radial - Height plot
+        data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)'
+        data_h_normal = data ./ maximum(data, dims = 1)
+        data_h_normal[isnan.(data_h_normal)] .= 0.0
+        i_max = [argmax(d) for d in eachcol(data)]
+
+        ax = axs_ion[i1, i2]
+        hm_ion = heatmap!(ax, r_edges, h_edges/1e3, data,
+            colorscale = log10,
+            colorrange = (1, 1e6 #maximum(data)
+            ), lowclip = ("white", 1e-2),
+            )
+        println( maximum(data))  
+        sleep(1)
+        if lim_pitch_deg == 90
+            text!(ax, 15, 460, text = "$E0 eV", font =:bold)
+        end
+
+        lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Mean Gyroradius Pitch")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
+
+        if showlines
+            lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
+            contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
+            contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dashdot, label = "1/2e contour")
+            lines!(ax, r_gyro_h_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+            lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+        end
 
 
-#extract edges
-h_edges = his_hrp.edges[1]
-r_edges = his_hrp.edges[2]
-p_edges = his_hrp.edges[3]
-h_middle = h_edges[1:end-1] + diff(h_edges)/2
-r_middle = r_edges[1:end-1] + diff(r_edges)/2
-p_middle = p_edges[1:end-1] + diff(p_edges)/2
+        # Radial - Height plot normalised density
+        data = dropdims(sum(his_hrp_norm.weights, dims = 3), dims = 3)' #./ dropdims(sum(area_pr, dims = 1), dims = 1)
+        data_h_normal = data ./ maximum(data, dims = 1)
+        data_h_normal[isnan.(data_h_normal)] .= 0.0
+        i_max = [argmax(d) for d in eachcol(data)]
 
-# compute gyroradius
-include("magnetic_field.jl")
-B = norm.([convergent_vertical_field([0, 0, h+c.re]) for h in h_middle])
-r_gyro_h_max = v_abs(E0) * c.me ./ (c.qe * B)
-lim_pitch = lim_pitch_deg /180 *pi
-#mean_vperp_theory = (1/2 * lim_pitch - 1/4*sin(2*lim_pitch)) / (1-cos(lim_pitch))
-mean_vperp_theory = (1/2 * lim_pitch - 1/4*sin(2*lim_pitch)) / (2 * sin(lim_pitch)^2) #higher precision by avoiding subtraction
-B_top = convergent_vertical_field([0, 0, 600e3+c.re])
-v_perp_mean = mean_vperp_theory * v_abs(E0)
-r_gyro_mean = v_perp_mean * c.me ./ (c.qe * B)
+        ax = axs_prod[i1, i2]
+        hm_prod = heatmap!(ax, r_edges, h_edges/1e3, data,
+            colorscale = log10,
+            colorrange = (1e-2, 1e4 #maximum(data)
+            ), lowclip = ("white", 1e-2),
+            )
+        println( maximum(data))
+        sleep(1)
+        if lim_pitch_deg == 90
+            text!(ax, 15, 460, text = "$E0 eV", font =:bold)
+        end
 
+        lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Max Gyroradius Pitch")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
 
-mag_moment = c.me * (v_abs(E0)*sin(lim_pitch))^2 / (2 * norm(B_top))
-v_perp_max_pitch_lim = sqrt.(mag_moment * 2 * B / c.me)
-r_gyro_max_pitch_lim = v_perp_max_pitch_lim * c.me ./ (c.qe * B)
+        if showlines
+            lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
+            contour!(ax, r_middle, h_middle[1:25]/1e3, data_h_normal[:, 1:25], levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dashdot, label = "1/2e contour")
+            lines!(ax, r_gyro_h_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
+            lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
+        end 
 
-if lim_pitch_deg == 90
-    r_gyro_max_pitch_lim = v_abs(E0) * c.me ./ (c.qe * B)
+        for (i3, h) in enumerate(heights)  
+            hi = findfirst(x -> x > h * 1e3, h_middle)
+            d = dropdims(sum(his_hrp_norm.weights[hi, :, :], dims = 2), dims = 2)
+            lines!(axs_r_h[i1, i2], [-r_middle; r_middle], [d; d], label= "$h km")
+            if lim_pitch_deg == 90
+                text!(ax, 15, 460, text = "$E0 eV", font =:bold)
+            end
+        end
+    end
 end
 
-if any(v_perp_max_pitch_lim .> v_abs(E0))
-    println("Mirroring $lim_pitch_deg deg")
-    #error()
-end
-
-# Radial - Height plot
-data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)'
-data_h_normal = data ./ maximum(data, dims = 1)
-data_h_normal[isnan.(data_h_normal)] .= 0.0
-i_max = [argmax(d) for d in eachcol(data)]
-
-ax = axs_ion[i1, i2]
-hm_ion = heatmap!(ax, r_edges, h_edges/1e3, data,
-    colorscale = log10,
-    colorrange = (1, 1e6 #maximum(data)
-    ), lowclip = ("white", 1e-2),
-    )
-println( maximum(data))  
-sleep(1)
-if lim_pitch_deg == 90
-text!(ax, 15, 460, text = "$E0 eV", font =:bold)
-end
-
-lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Mean Gyroradius Pitch")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
-
-if showlines
-lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dashdot, label = "1/2e contour")
-lines!(ax, r_gyro_h_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
-lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
-end
-
-
-
-
-# Radial - Height plot normalised density
-data = dropdims(sum(his_hrp_norm.weights, dims = 3), dims = 3)' #./ dropdims(sum(area_pr, dims = 1), dims = 1)
-data_h_normal = data ./ maximum(data, dims = 1)
-data_h_normal[isnan.(data_h_normal)] .= 0.0
-i_max = [argmax(d) for d in eachcol(data)]
-
-ax = axs_prod[i1, i2]
-hm_prod = heatmap!(ax, r_edges, h_edges/1e3, data,
-    colorscale = log10,
-    colorrange = (1e-2, 1e4 #maximum(data)
-    ), lowclip = ("white", 1e-2),
-    )
-println( maximum(data))
-sleep(1)
-if lim_pitch_deg == 90
-text!(ax, 15, 460, text = "$E0 eV", font =:bold)
-end
-
-lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Max Gyroradius Pitch")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
-contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
-
-if showlines
-lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
-contour!(ax, r_middle, h_middle[1:25]/1e3, data_h_normal[:, 1:25], levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dashdot, label = "1/2e contour")
-lines!(ax, r_gyro_h_max , h_middle/1e3, color= "black", label = "Max Gyroradius")
-lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
-end 
-#axislegend(ax)
-
-
-end
-end
 Colorbar(f_hr_ion[2:4, 3], hm_ion, label="Counts [1]")
 Colorbar(f_hr_prod[2:4, 3], hm_prod, label="Production [1/m³]")
 
@@ -400,6 +422,8 @@ axs_ion[1, 2].title = "90 deg"
 axs_prod[1, 1].title = "20 deg"
 axs_prod[1, 2].title = "90 deg"
 
+axs_r_h[1, 1].title = "20 deg"
+axs_r_h[1, 2].title = "90 deg"
 
 [ax.xlabel = "Radial Distance [m]" for ax in axs_ion[end, :]]
 [ax.ylabel = "Height [km]" for ax in axs_ion[:, 1]]
@@ -407,22 +431,31 @@ axs_prod[1, 2].title = "90 deg"
 [ax.xlabel = "Radial Distance [m]" for ax in axs_prod[end, :]]
 [ax.ylabel = "Height [km]" for ax in axs_prod[:, 1]]
 
+[ax.xlabel = "Radial Distance [m]" for ax in axs_r_h[end, :]]
+[ax.ylabel = "Production [m⁻³]" for ax in axs_r_h[:, 1]]
+
 axislegend(axs_ion[1, 1])
 axislegend(axs_prod[1, 1])
+axislegend(axs_r_h[1, 1])
 
 linkyaxes!(axs_ion[:])
 linkxaxes!(axs_ion[:])
 linkyaxes!(axs_prod[:])
 linkxaxes!(axs_prod[:])
+linkyaxes!(axs_r_h[:])
+linkxaxes!(axs_r_h[:])
 
 display(f_hr_ion)
 display(f_hr_prod)
+display(f_prod_r_h)
 
 save(joinpath(dir, "plots", "panel_hist_hr_all_E_pitch.png"), f_hr_ion, px_per_unit = 3)
 save(joinpath(dir, "plots", "panel_hist_norm_hr_all_E_pitch.png"), f_hr_prod, px_per_unit = 3)
+save(joinpath(dir, "plots", "panel_prod_r_h_all_E_pitch.png"), f_prod_r_h, px_per_unit = 3)
 
 
 ##
+
 
 
 #dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
@@ -494,6 +527,33 @@ r_gyro_pitch_lim = v_abs(E0) * sin(lim_pitch) * c.me ./ (c.qe * B)
 h_ind = 7
 #change h_ind to heights, and find correspdng h_ind
 
+
+## production at selected altitudes:
+fig = Figure()
+sleep(1)
+ax = Axis(fig[1, 1], 
+    title = "$E0 eV, $lim_pitch_deg deg", 
+    limits = (nothing, (1e-4, 1e4)), 
+    xlabel = "Radial Distance [m]", 
+    ylabel = "Production [1/m³]",
+    yscale = log10,
+    )
+
+
+heights = [105, 120, 140, 180, 250, 350, 500]
+h_inds = [findfirst(h -> h > height * 1e3, h_middle) for height in heights]
+for (i1, h) in enumerate(heights)  
+    hi = findfirst(x -> x > h * 1e3, h_middle)
+    d = dropdims(sum(his_hrp_norm.weights[hi, :, :], dims = 2), dims = 2)
+    lines!(ax, [-r_middle; r_middle], [d; d], label= "$h km")
+end
+axislegend()
+#fig
+
+
+fig = Figure()
+
+ 
 
 
 
