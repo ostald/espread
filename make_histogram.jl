@@ -5,14 +5,13 @@ include("constants.jl")
 
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
+#dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
 if !isdir(joinpath(dir, "hist"))
     mkdir(joinpath(dir, "hist"))
 end
-
 
 for file in dir_con_raw
     println("Processing file: ", file)
@@ -50,7 +49,7 @@ for file in dir_con_raw
 
 
     #define histogram bins
-    h_edges = collect(80e3:1e2:600e3)
+    h_edges = collect(80e3:1e3:600e3)
     r_edges = collect(0:0.1:40)
     p_edges = collect(-pi:pi/36:pi)
 
@@ -81,7 +80,6 @@ end
 
 
 
-dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 if !isdir(joinpath(dir, "hist_summed"))
     mkdir(joinpath(dir, "hist_summed"))
 end
@@ -90,14 +88,14 @@ runs = unique([d[1:end-10] for d in dir_con])
 #radial_runs = filter(x-> contains(x, "hrp"), runs)
 #cartesian_runs = filter(x-> contains(x, "xyz"), runs)
 
-for run in runs
-    list_h_run = filter(x-> contains(x, run), dir_con)
-    println("Summing histograms for run: ", run)
+#for r in runs
+    list_h_run = filter(x-> contains(x, r), dir_con)
+    println("Summing histograms for run: ", r)
     #sum all histograms
     his_summed = nothing
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = 0, 0, 0, 0, 0, 0
     for file in list_h_run
-        #println("Processing histogram file: ", file)
+        println("Processing histogram file: ", file)
         io = open(joinpath(dir, "hist", file), "r")
         E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_i = deserialize(io)
         close(io)
@@ -110,7 +108,7 @@ for run in runs
         end
     end
 
-    open(joinpath(dir, "hist_summed", run * "_summed.hist"), "w") do io
+    open(joinpath(dir, "hist_summed", r * "_summed.hist"), "w") do io
         serialize(io, [E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_summed])
     end
 end

@@ -134,7 +134,7 @@ df_alt0 = filter(:alt0 => x -> x > 599e3, df)
 fig = Figure()
 ax = Axis3(fig[1, 1])
 scatter!(ax, Point3.(df_alt0.r0), markersize = 2)#, 
-display(fig)
+#display(fig)
 save(joinpath(dir, "plots", "r0_primary_e_$(E0)_$(lim_pitch_deg).png"), fig)
 
 
@@ -600,8 +600,8 @@ end
     npoints = 40
     #kernel = :normal
     bandwidth = 1.0
-    U = kde(d, boundary=boundary, npoints=npoints, bandwidth=bandwidth)
-    lines!(ax, U.x, U.density, color = "green", label = "KDE")
+    #U = kde(d, boundary=boundary, npoints=npoints, bandwidth=bandwidth)
+    #lines!(ax, U.x, U.density, color = "green", label = "KDE")
 
 end
 
@@ -690,3 +690,5 @@ for i in axes(z_middle, 1)
     display(fig)
 end
 
+using Bonito
+Bonito.set_cleanup_time!(1)
