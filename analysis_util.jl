@@ -12,7 +12,7 @@ function load_result(file)
             v = Vector{Float64}[]
             )
 
-    io = open(joinpath(dir,  file), "r")
+    io = open(file, "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
     data = [deserialize(io) for _ in 1:Int(1e6) if !eof(io)]
     close(io)
