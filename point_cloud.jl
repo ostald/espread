@@ -23,7 +23,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
 
     @time for (id, file) in enumerate(files)
-        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(file)
+        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
         
         #df.E0 = E_ev.(norm.(df.v0))
         #df.E_end = E_ev.(norm.(df.v))
@@ -140,7 +140,7 @@ for r in runs[9:end]
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
 
     @time for (id, file) in enumerate(files)
-        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(file)
+        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
         
         #df.E0 = E_ev.(norm.(df.v0))
         #df.E_end = E_ev.(norm.(df.v))

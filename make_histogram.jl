@@ -15,7 +15,7 @@ end
 
 for file in dir_con_raw
     println("Processing file: ", file)
-    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(file)
+    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
 
     df.E0 = E_ev.(norm.(df.v0))
     df.E_end = E_ev.(norm.(df.v))
