@@ -88,7 +88,7 @@ runs = unique([d[1:end-10] for d in dir_con])
 #radial_runs = filter(x-> contains(x, "hrp"), runs)
 #cartesian_runs = filter(x-> contains(x, "xyz"), runs)
 
-#for r in runs
+for r in runs
     list_h_run = filter(x-> contains(x, r), dir_con)
     println("Summing histograms for run: ", r)
     #sum all histograms
