@@ -13,7 +13,7 @@ dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
 runs = unique([d[1:end-8] for d in dir_con_raw])
 
-get_escaping_df = true
+get_escaping_df = false
 
 if get_escaping_df
     for r in runs
@@ -47,12 +47,27 @@ if get_escaping_df
 end
 
 
+##
 
 dir_con = readdir(joinpath(dir, "escaping"))
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 runs_ = unique([d for d in dir_con_raw])
+runs_ = [
+ "escaping_res_500.0eV_20.0deg_.bin",
+ "escaping_res_500.0eV_90.0deg_.bin",
+ "escaping_res_1000.0eV_20.0deg_.bin",
+ "escaping_res_1000.0eV_90.0deg_.bin",
+ "escaping_res_2000.0eV_20.0deg_.bin",
+ "escaping_res_2000.0eV_90.0deg_.bin",
+ "escaping_res_4000.0eV_20.0deg_.bin",
+ "escaping_res_4000.0eV_90.0deg_.bin",
+ "escaping_res_8000.0eV_20.0deg_.bin",
+ "escaping_res_8000.0eV_90.0deg_.bin"
+]
 
-E_bins = 10 .^collect(0:0.1:log10(8000*1.5))
+
+E_edges = 2 .^collect(0:1/4:log2(8000*1.5))./1.024
+E_edges = 2 .^ 2 .^collect(0:1/128:log2(log2(8000*1.5))) / 2545.4561526280904 * 2000
 
 ##
 WGLMakie.activate!()
@@ -61,11 +76,11 @@ sleep(1)
 ax_esc = Axis(f_esc_E_all[1, 1], 
     xscale = log10,
     yscale = log10,
-    limits = ((10, nothing), (1, 1e6)),
+    limits = ((10, nothing), (1e1, 1e5)),
     xlabel = "Energy [eV]", 
-    ylabel = "Counts [1]")
+    ylabel = "Density [1/log(E)]")
 
-#for r_ in runs_
+for (i1, r_) in enumerate(runs_)
     println("Processing run: ", r_)
 
     io = open(joinpath(dir, "escaping", r_), "r")
@@ -73,8 +88,9 @@ ax_esc = Axis(f_esc_E_all[1, 1],
     df = deserialize(io)
     close(io)
     df.E = E_ev.(norm.(df.v))
-    his_E = fit(Histogram, df.E, collect(0:100:E0))
+    his_E = fit(Histogram, df.E, E_edges)
     E_middle = his_E.edges[1][1:end-1] .+ diff(his_E.edges[1])
+    norm_his = his_E.weights .* diff(log2.(his_E.edges[1]))
     #open(joinpath(dir, "escaping", "escaping_" * r * ".bin"), "w") do io
     #    serialize(io, [E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals])
     #    serialize(io, df_escaping)
@@ -82,21 +98,22 @@ ax_esc = Axis(f_esc_E_all[1, 1],
 
     #stephist!(ax_esc, df.E, bins = 0:20:E0, label="$(E0)eV_$(lim_pitch_deg)_deg")
     #stephist!(ax_esc, df.E, bins = 10 .^collect(0:0.1:log10(8000*1.5)), label="$(E0)eV_$(lim_pitch_deg)_deg")
-    s = stairs!(ax_esc, [his_E.edges[1].+1e-3; E0], [1e-30; his_E.weights; 1e-30], label="$(E0)eV_$(lim_pitch_deg)_deg")
-
+    color = Makie.wong_colors()[ceil(Int, i1/2)];
+    if lim_pitch_deg == 20.0
+        s = stairs!(ax_esc, [his_E.edges[1]; E0], [1e-30; norm_his .+ 1e-30; 1e-30], label="$(E0)eV", color = color)
+    else
+        s = stairs!(ax_esc, [his_E.edges[1]; E0], [1e-30; norm_his .+ 1e-30; 1e-30], linestyle = :dot, color = color)
+    end
 end
-ylims!(ax_esc, 1, 1e6)
-#ax_esc.yscale[] = log10
-ax_esc.xscale[] = log10
+
+lines!(ax_esc, 1, 1, label = "20 deg", color = "black")
+lines!(ax_esc, 1, 1, label = "90 deg", color = "black", linestyle = :dot)
+axislegend(ax_esc, position=:lt)
+save(joinpath(dir, "plots", "escaping_hist_allE_pitch.png"), f_esc_E_all, px_per_unit = 3)
+
 ##
-axislegend(ax_esc)
-display(f_esc_E_all)
-save(joinpath(dir, "plots", "escaping_hist_allE_pitch.png"), f_esc_E, px_per_unit = 3)
 
-
-
-
-
+"""
 using CairoMakie
 CairoMakie.activate!()
 
