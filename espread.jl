@@ -335,7 +335,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     hmin = 80e3     #m
     hmax = alt0+1e4 #m
     hintervals = 1e2 #m
-    densityf = make_densityf(hmin, hmax, hintervals)
+    densityf = make_densityf(hmin, hmax, hintervals, loc_geod)
     #stack(densityf_fast.(hmsis))' == atm
     #    > true
 
