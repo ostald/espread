@@ -1,11 +1,14 @@
 using Serialization
 using DataFrames
-using WGLMakie
 using LinearAlgebra
 
 using Bonito    
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
+
+using WGLMakie
+using CairoMakie
+CairoMakie.activate!()
 
 include("analysis_util.jl")
 
@@ -77,7 +80,7 @@ for r in runs_xyz_20
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f)
+save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3))
 f
 
 f = Figure()
@@ -107,7 +110,7 @@ for r in runs_xyz_90
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_90deg_allE.png"), f)
+save(joinpath(dir, "plots", "hist_height_xyz_90deg_allE.png"), f, px_per_unit = 3))
 
 
 f = Figure()
@@ -145,7 +148,7 @@ end
 lines!(ax, [0, 0], [0, 0], color = "black", label = "20 deg")
 lines!(ax, [0, 0], [0, 0], color = "black", linestyle = :dot, label = "90 deg")
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_allE.png"), f, px_per_unit = 300/inch)
+save(joinpath(dir, "plots", "hist_height_xyz_allE.png"), f, px_per_unit = 3)
 
 
 
@@ -243,6 +246,10 @@ display(f)
 ##
 
 WGLMakie.activate!()
+
+using CairoMakie
+CairoMakie.activate!()
+
 
 showlines = false
 f_hr_ion = Figure(size = (900, 1200))

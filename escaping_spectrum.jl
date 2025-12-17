@@ -76,7 +76,7 @@ sleep(1)
 ax_esc = Axis(f_esc_E_all[1, 1], 
     xscale = log10,
     yscale = log10,
-    limits = ((10, nothing), (1e1, 1e5)),
+    limits = ((10, nothing), (1e0, 1e5)),
     xlabel = "Energy [eV]", 
     ylabel = "Density [1/log(E)]")
 
@@ -109,7 +109,7 @@ end
 lines!(ax_esc, 1, 1, label = "20 deg", color = "black")
 lines!(ax_esc, 1, 1, label = "90 deg", color = "black", linestyle = :dot)
 axislegend(ax_esc, position=:lt)
-save(joinpath(dir, "plots", "escaping_hist_allE_pitch.png"), f_esc_E_all, px_per_unit = 3)
+save(joinpath(dir, "plots", "escaping_hist_allE_pitch.png"), f_esc_E_all, px_per_unit = 30)
 
 ##
 

@@ -10,4 +10,7 @@ TO DO
 
 - markov chain
 
-- outgoing flux analysis
+- cdf of radial distribution for 1/e calculation, look into kernel density estimation
+
+- height distirbution of spwaning  height of escaping electorns
+
