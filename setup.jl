@@ -7,24 +7,24 @@ b_model = "vertical"
 #b_model = "dipole"
 
 # Define initial energy
-E0 = 1e4 #eV
+#E0 = 1e4 #eV
 #e_energy = [500, 1e3, 2e3, 4e3, 8e3]
-e_energy = [4e3]
+e_energy = [16e3]
 
 # Define number of particles
-N_electrons = 1e3
+N_electrons = 1e6
 
 # starting altitude
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-lim_pitch_deg = 20 #deg
+#lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
 #Bin! = dipole_field_earth!
 #Bin! = convergent_vertical_field!
 
 pitch_limits_deg = [20, 90]
-pitch_limits_deg = [60]
+#pitch_limits_deg = [60]
 
 nPerGyro = 20
 
@@ -40,7 +40,7 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "r6_conicB_60deg"
+name = "r7_conicB_16kev"
 res_dir = joinpath("results", name * string(now()))
 
 nprocesses = 200

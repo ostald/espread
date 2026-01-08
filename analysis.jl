@@ -563,7 +563,7 @@ end
 
 
 
-#for i in axes(h_middle, 1)
+for i in axes(h_middle, 1)
     d = data[:, i]
     if sum(d) < 10
         continue
@@ -590,7 +590,7 @@ end
     axislegend(ax)
     #xlims!(ax, -20, 20)
     #save(joinpath(dir, "plots", "hist2d_rd_height_gaussfit_$(E0)_$(lim_pitch_deg)_$(h_middle[i]/1e3)km.png"), fig)
-    #display(fig)
+    display(fig)
 
     dv = [dh*dr*dp /2 for dh in diff(h_bins), dr in diff(r_bins.^2), dp in diff(p_bins)]
     data = dropdims(sum(his_hrp.weights, dims = 3), dims = 3)' ./ area_r

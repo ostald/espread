@@ -2,6 +2,7 @@ using Serialization
 using DataFrames
 using LinearAlgebra
 
+
 using Bonito    
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
@@ -9,6 +10,7 @@ Bonito.set_cleanup_time!(1)
 using WGLMakie
 using CairoMakie
 CairoMakie.activate!()
+WGLMakie.activate!()
 
 include("analysis_util.jl")
 
@@ -48,15 +50,213 @@ runs_hrp_90 = filter(x-> contains(x, "90.0deg"), runs_hrp)
 
 
 
+#_______________________________________________________________________________________
 ## Plot ionization vs height for different energies and pitch angles
+#check atmosphere
+df = CSV.read("/nfs/revontuli/data/oliver/espread/results/r4_conicB_2025-09-05T14:19:27.566/atmosphere.txt",
+            DataFrame;
+            header = false,
+            delim = " ", 
+            types=Float64,
+            ignorerepeated=true)
+rename!(df, :Column1 => :height, :Column2 => :nN2, :Column3 => :nO2, :Column4 => :nO)
+fig, ax, lin = lines(log10.(df.nN2), df.height)
+lines!(ax, log10.(df.nO2), df.height)
+lines!(ax, log10.(df.nO), df.height)
+include("get_msis.jl")
+z = hmin+hintervals/2:hintervals:600e3
+densityf = make_densityf(hmin+hintervals/2, hmax, hintervals, [69.58, 19.23])
+atm = stack(densityf.(z))'
+lines!(ax, log10.(atm[:, 1]), z)
+lines!(ax, log10.(atm[:, 2]), z)
+lines!(ax, log10.(atm[:, 3]), z)
+using DelimitedFiles
+writedlm( "atmosphere_julia.csv",  atm, ',')
+##
+
+#get production models from matlab:
+prod_dir = "/nfs/revontuli/data/oliver/espread/results/r4_conicB_2025-09-05T14:19:27.566/plots/"
+prod_f = [
+"prod500.txt",
+"prod1000.txt",
+"prod2000.txt",
+"prod4000.txt",
+"prod8000.txt"]
+
+using CSV
+reference_prod = []
+for (i1, f) in enumerate(prod_f)
+    df = CSV.read("/nfs/revontuli/data/oliver/espread/results/r4_conicB_2025-09-05T14:19:27.566/plots/"*f,
+            DataFrame;
+            header = false,
+            delim = " ", 
+            types=Float64,
+            ignorerepeated=true)
+    rename!(df, :Column1 => :height, :Column2 => :fang, :Column3 => :serg, :Column4 => :rees)
+    #df.height = map(x -> parse(Float64, x), df.height)
+    append!(reference_prod, [df])
+end
+
+#compare to other production formulas (from matlab elspec)
+f = Figure(size = (600, 1000))
+sleep(1)
+axs = [Axis(f[i, 1], 
+        #xlabel = "Production [m⁻³]",
+        ylabel = "Height [km]",
+        limits = ((1e1, 1e5), (80, 250)),
+        xscale = log10,
+        xtickformat = values -> ["" for value in values]
+        #title = "Production vs Height 20 deg"
+        ) for i in 1:5]
+linkxaxes!(axs)
+for (i,r) in enumerate(runs_xyz_90)
+    #if occursin("500",r) continue end
+    #if occursin("1000",r) continue end
+    #if occursin("2000",r) continue end
+    #if occursin("8000",r) continue end
+    
+    ax = axs[i]
+    println(r)
+    io = open(joinpath(dir, "hist_summed", r), "r")
+    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
+    close(io)
+
+    new_edges = (his_xyz.edges[1], his_xyz.edges[2], filter(x -> mod(x, 1000) == 0, his_xyz.edges[3]))
+
+    his_xyz = rebin(his_xyz, new_edges);
+    his_xyz = normalize(his_xyz, mode=:density)
+    # normalise by density is the same as dividing by bin volume
+    # check:
+    #dv = [dx*dy*dz for dx in diff(x_edges), dy in diff(y_edges), dz in diff(z_edges)]
+    #his_xyz.weights ./ dv == (normalize(his_xyz, mode=:density)).weights
+    # >>> true
+
+    data = dropdims(sum(his_xyz.weights, dims = (1, 2)), dims = (1, 2))
+    z_edges = his_xyz.edges[3]
+    z_middle = z_edges[1:end-1] + diff(z_edges)/2   
+
+    max_montecarlo = maximum(data)
+
+    color = Makie.wong_colors()[i]
+
+    lines!(ax, data, z_middle/1e3, label = "$E0 eV", color = color)
+
+    df = reference_prod[i]
+
+    lines!(ax, df.fang/maximum(df.fang) * max_montecarlo, df.height, linestyle = :dash, color = color)
+    lines!(ax, df.serg/maximum(df.serg) * max_montecarlo, df.height, linestyle = :dot, color = color)
+    lines!(ax, df.rees/maximum(df.rees[.!isnan.(df.rees)]) * max_montecarlo, df.height, linestyle = :dashdot, color = color)
+
+    #lines!(ax, df.fang*1e6, df.height, label = "Fang", linestyle = :dash, color = color)
+    #lines!(ax, df.serg*1e6, df.height, label = "Sergienko", linestyle = :dot, color = color)
+    #lines!(ax, df.rees*1e6, df.height, label = "Rees", linestyle = :dashdot, color = color)
+    if i != 1 axislegend(ax) end
+
+end
+
+lines!(axs[1], 0, 0, label = "MC", linestyle = :solid, color = :black)
+lines!(axs[1], 0, 0, label = "Fang", linestyle = :dash, color = :black)
+lines!(axs[1], 0, 0, label = "Sergienko", linestyle = :dot, color = :black)
+lines!(axs[1], 0, 0, label = "Rees", linestyle = :dashdot, color = :black)
+
+axislegend(axs[1], position =:rt)
+axs[end].xtickformat = values -> ["$(value)" for value in values]
+axs[1].title = "Production vs Height isotropic"
+axs[end].xlabel = "Production [m⁻³]"
+[ylims!(ax, 80, 200) for ax in axs[4:end]]
+save(joinpath(dir, "plots", "comp_prod_hist_height_xyz_90deg_4000ev.png"), f, px_per_unit = 3.3)
+f
+##
+
+#comparison of models 4000ev only
+
 f = Figure()
 sleep(1)
 ax = Axis(f[1, 1], 
-        xlabel = "Ionizations [m⁻³]",
+        xlabel = "Production [m⁻³]",
+        ylabel = "Height [km]",
+        limits = ((1e-4, 1e-2), (100, 180)),
+        xscale = log10,
+        xticks = LogTicks(-4:-2),
+        #title = "Production vs Height isotropic"
+        )
+for r in runs_xyz_90[4:4]
+    println(r)
+    io = open(joinpath(dir, "hist_summed", r), "r")
+    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
+    close(io)
+
+    new_edges = (his_xyz.edges[1], his_xyz.edges[2], filter(x -> mod(x, 1000) == 0, his_xyz.edges[3]))
+
+    his_xyz = rebin(his_xyz, new_edges);
+    his_xyz = normalize(his_xyz, mode=:density)
+    # normalise by density is the same as dividing by bin volume
+    # check:
+    #dv = [dx*dy*dz for dx in diff(x_edges), dy in diff(y_edges), dz in diff(z_edges)]
+    #his_xyz.weights ./ dv == (normalize(his_xyz, mode=:density)).weights
+    # >>> true
+
+    data = dropdims(sum(his_xyz.weights, dims = (1, 2)), dims = (1, 2))
+    z_edges = his_xyz.edges[3]
+    z_middle = z_edges[1:end-1] + diff(z_edges)/2   
+    lines!(ax, data/1e6, z_middle/1e3, label = "MC $E0 eV")
+    
+    max_montecarlo = maximum(data)/1e6
+
+    df = reference_prod[4]
+
+    lines!(ax, df.fang/maximum(df.fang) * max_montecarlo, df.height, label = "Fang", linestyle = :dash)
+    lines!(ax, df.serg/maximum(df.serg) * max_montecarlo, df.height, label = "Sergienko", linestyle = :dot)
+    lines!(ax, df.rees/maximum(df.rees[.!isnan.(df.rees)]) * max_montecarlo, df.height, label = "Rees", linestyle = :dashdot)
+    
+    #lines!(ax, df.fang, df.height, label = "Fang", linestyle = :dash)
+    #lines!(ax, df.serg, df.height, label = "Sergienko", linestyle = :dot)
+    #lines!(ax, df.rees, df.height, label = "Rees", linestyle = :dashdot)
+
+
+end
+axislegend(ax)
+save(joinpath(dir, "plots", "hist_height_xyz_90deg_4000ev.png"), f, px_per_unit = 3.3)
+f
+
+##
+r = "h_xyz_4000.0eV_90.0deg_summed.hist"
+io = open(joinpath(dir, "hist_summed", r), "r")
+E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
+close(io)
+new_edges = (his_xyz.edges[1], his_xyz.edges[2], filter(x -> mod(x, 1000) == 0, his_xyz.edges[3]))
+his_xyz = rebin(his_xyz, new_edges);
+his_xyz = normalize(his_xyz, mode=:density)
+data = dropdims(sum(his_xyz.weights, dims = (1, 2)), dims = (1, 2))
+df = reference_prod[4]
+f, a, l = lines(df.fang*1e6./data, df.height)
+
+f = Figure()
+ax = Axis(f[1, 1])
+for i1 in 1:5
+    r = runs_xyz_90[i1]
+    io = open(joinpath(dir, "hist_summed", r), "r")
+    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
+    close(io)
+    new_edges = (his_xyz.edges[1], his_xyz.edges[2], filter(x -> mod(x, 1000) == 0, his_xyz.edges[3]))
+    his_xyz = rebin(his_xyz, new_edges);
+    his_xyz = normalize(his_xyz, mode=:density)
+    data = dropdims(sum(his_xyz.weights, dims = (1, 2)), dims = (1, 2))
+    df = reference_prod[i1]
+    lines!(ax, df.fang*1e6./data, df.height)
+    #display(f)
+end
+
+##
+#field aligned
+f = Figure()
+sleep(1)
+ax = Axis(f[1, 1], 
+        xlabel = "Production [m⁻³]",
         ylabel = "Height [km]",
         limits = ((1e-1, 1e5), (80, 600)),
         xscale = log10,
-        title = "Ionizations vs Height 20 deg"
+        title = "Production vs Height 20 deg"
         )
 for r in runs_xyz_20
     println(r)
@@ -80,17 +280,19 @@ for r in runs_xyz_20
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3))
+save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3.3)
 f
+
+##
 
 f = Figure()
 sleep(1)
 ax = Axis(f[1, 1], 
-        xlabel = "Ionizations [m⁻³]",
+        xlabel = "Production [m⁻³]",
         ylabel = "Height [km]",
         limits = ((1e-1, 1e5), (80, 600)),
         xscale = log10,
-        title = "Ionizations vs Height 90 deg"
+        title = "Production vs Height 90 deg"
         )
 for r in runs_xyz_90
     println(r)
@@ -110,17 +312,17 @@ for r in runs_xyz_90
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_90deg_allE.png"), f, px_per_unit = 3))
-
+save(joinpath(dir, "plots", "hist_height_xyz_90deg_allE.png"), f, px_per_unit = 3.3)
+f
 
 f = Figure()
 sleep(1)
 ax = Axis(f[1, 1], 
-        xlabel = "Ionizations [m⁻³]",
+        xlabel = "Production [m⁻³]",
         ylabel = "Height [km]",
         limits = ((1e-1, 1e5), (80, 600)),
         xscale = log10,
-        title = "Ionizations vs Height"
+        title = "Production vs Height"
         )
 for (i, r) in enumerate(runs_xyz)
     println(r)
@@ -145,11 +347,11 @@ for (i, r) in enumerate(runs_xyz)
         lines!(ax, data, z_middle/1e3, linestyle = :dot, color = color)
     end
 end
-lines!(ax, [0, 0], [0, 0], color = "black", label = "20 deg")
-lines!(ax, [0, 0], [0, 0], color = "black", linestyle = :dot, label = "90 deg")
+lines!(ax, [0, 0], [0, 0], color = "black", label = "field-aligned θₗᵢₘ = 20 deg")# lim \theta_{lim} = 20^\circ")
+lines!(ax, [0, 0], [0, 0], color = "black", linestyle = :dot, label = "isotropic")
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_allE.png"), f, px_per_unit = 3)
-
+save(joinpath(dir, "plots", "hist_height_xyz_allE.png"), f, px_per_unit = 3.3)
+f
 
 
 ##
@@ -158,7 +360,7 @@ using CairoMakie
 CairoMakie.activate!()
 
 #polar plot at different heights and energies
-f = Figure(size = (1400, 1000))
+f = Figure(size = (1000, 700))
 sleep(1)
 axs = [PolarAxis(f[i, j],
     thetaticksvisible = false,
@@ -185,12 +387,12 @@ colgap!(f.layout, 1, Real(0.1))  # Minimal row gap
 for j in 2:5
     colgap!(f.layout, j, Relative(-0.02))  # Minimal row gap
 end
-Label(f[-1, :], "Ionization Distribution in (r, θ) at Different Heights and Energies",)
+Label(f[-1, :], "Production Distribution in (r, θ) at Different Heights and Energies",)
 
 p = nothing
 
 sleep(1)
-for (i2, r) in enumerate(runs_hrp_20)
+for (i2, r) in enumerate(runs_hrp_90)
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
@@ -234,10 +436,10 @@ for (i2, r) in enumerate(runs_hrp_20)
         #axislegend(ax)
     end
 end
-Colorbar(f[1:end, 6], p, label="Ionizations [m⁻³]")
+Colorbar(f[1:end, 6], p, label="Production [m⁻³]")
 axs[4, 1].rticklabelsvisible = true
 text!(axs[4, 1], 5.99, 12, text = "[m]", align = (:center, :top))
-save(joinpath(dir, "plots", "panel_radial_hist_$(lim_pitch_deg)_all_E.png"), f, px_per_unit = 3)
+save(joinpath(dir, "plots", "panel_radial_hist_$(lim_pitch_deg)_all_E.png"), f, px_per_unit = 3.3)
 display(f)
 
 
@@ -286,8 +488,8 @@ axs_r_h = [Axis(f_prod_r_h[row, col],
     ytickformat = values -> ["" for value in values],
     xtickformat = values -> ["" for value in values]
     ) for row in 1:5, col in 1:2] 
-[ax.xtickformat = values -> ["$(value)" for value in values] for ax in axs_prod[end, :]]
-[ax.ytickformat = values -> ["$(value)" for value in values] for ax in axs_prod[:, 1]]
+[ax.xtickformat = values -> ["$(value)" for value in values] for ax in axs_r_h[end, :]]
+[ax.ytickformat = Makie.automatic for ax in axs_r_h[:, 1]]
 
 #+    limits = (nothing, (1e-4, 1e4)), 
 #+    xlabel = "Radial Distance [m]", 
@@ -369,7 +571,7 @@ for (i2, collection) in enumerate([runs_hrp_20, runs_hrp_90])
 
         lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Mean Gyroradius Pitch")
         contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
-        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/2e contour")
 
         if showlines
             lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
@@ -398,9 +600,9 @@ for (i2, collection) in enumerate([runs_hrp_20, runs_hrp_90])
             text!(ax, 15, 460, text = "$E0 eV", font =:bold)
         end
 
-        lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Max Gyroradius Pitch")
+        #lines!(ax, r_gyro_max_pitch_lim, h_middle/1e3, color= "black", linestyle = :dot, label = "Max Gyroradius Pitch")
         contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(1)], color= "red", linestyle = :dash, label = "1/e contour")
-        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/e contour")
+        contour!(ax, r_middle, h_middle/1e3, data_h_normal, levels=[maximum(data_h_normal)/exp(2)], color= "red", linestyle = :dash, label = "1/2e contour")
 
         if showlines
             lines!(ax, r_middle[i_max], h_middle/1e3, color= "red", label = "Max Density")
@@ -409,10 +611,12 @@ for (i2, collection) in enumerate([runs_hrp_20, runs_hrp_90])
             lines!(ax, r_gyro_mean, h_middle/1e3, color= "black", linestyle = :dash, label = "Mean Gyroradius")
         end 
 
+        ax = axs_r_h[i1, i2]
         for (i3, h) in enumerate(heights)  
             hi = findfirst(x -> x > h * 1e3, h_middle)
             d = dropdims(sum(his_hrp_norm.weights[hi, :, :], dims = 2), dims = 2)
-            lines!(axs_r_h[i1, i2], [-r_middle; r_middle], [d; d], label= "$h km")
+            #lines!(ax, [-r_middle; r_middle], [d; d], label= "$h km", color = Makie.to_colormap(:batlow10)[i3+3])
+            lines!(ax, [-r_middle; r_middle], [d; d], label= "$h km", color = Makie.to_colormap(:batlow)[i3*36])
             if lim_pitch_deg == 90
                 text!(ax, 15, 460, text = "$E0 eV", font =:bold)
             end
@@ -421,16 +625,16 @@ for (i2, collection) in enumerate([runs_hrp_20, runs_hrp_90])
 end
 
 Colorbar(f_hr_ion[2:4, 3], hm_ion, label="Counts [1]")
-Colorbar(f_hr_prod[2:4, 3], hm_prod, label="Production [1/m³]")
+Colorbar(f_hr_prod[2:4, 3], hm_prod, label="Production [m⁻³]")
 
 axs_ion[1, 1].title = "20 deg"
-axs_ion[1, 2].title = "90 deg"
+axs_ion[1, 2].title = "isotropic"
 
 axs_prod[1, 1].title = "20 deg"
-axs_prod[1, 2].title = "90 deg"
+axs_prod[1, 2].title = "isotropic"
 
 axs_r_h[1, 1].title = "20 deg"
-axs_r_h[1, 2].title = "90 deg"
+axs_r_h[1, 2].title = "isotropic"
 
 [ax.xlabel = "Radial Distance [m]" for ax in axs_ion[end, :]]
 [ax.ylabel = "Height [km]" for ax in axs_ion[:, 1]]
@@ -442,7 +646,7 @@ axs_r_h[1, 2].title = "90 deg"
 [ax.ylabel = "Production [m⁻³]" for ax in axs_r_h[:, 1]]
 
 axislegend(axs_ion[1, 1])
-axislegend(axs_prod[1, 1])
+#axislegend(axs_prod[1, 1])
 axislegend(axs_r_h[1, 1])
 
 linkyaxes!(axs_ion[:])
@@ -456,9 +660,9 @@ display(f_hr_ion)
 display(f_hr_prod)
 display(f_prod_r_h)
 
-save(joinpath(dir, "plots", "panel_hist_hr_all_E_pitch.png"), f_hr_ion, px_per_unit = 3)
-save(joinpath(dir, "plots", "panel_hist_norm_hr_all_E_pitch.png"), f_hr_prod, px_per_unit = 3)
-save(joinpath(dir, "plots", "panel_prod_r_h_all_E_pitch.png"), f_prod_r_h, px_per_unit = 3)
+#save(joinpath(dir, "plots", "panel_hist_hr_all_E_pitch.png"), f_hr_ion, px_per_unit = 3.3)
+#save(joinpath(dir, "plots", "panel_hist_norm_hr_all_E_pitch.png"), f_hr_prod, px_per_unit = 3.3)
+save(joinpath(dir, "plots", "panel_prod_r_h_all_E_pitch.png"), f_prod_r_h, px_per_unit = 3.3)
 
 
 ##
@@ -490,7 +694,7 @@ z_middle = z_edges[1:end-1] + diff(z_edges)/2
 #single plots
 
 #for r in runs_hrp
-io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_90.0deg_summed.hist"), "r")
+io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_20.0deg_summed.hist"), "r")
 #io = open(joinpath(dir, "hist_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
 close(io)
@@ -555,7 +759,7 @@ for (i1, h) in enumerate(heights)
     lines!(ax, [-r_middle; r_middle], [d; d], label= "$h km")
 end
 axislegend()
-#fig
+fig
 
 
 fig = Figure()
@@ -615,7 +819,7 @@ function plot_histogram_phase_rdist_normalised(dir, E0, lim_pitch_deg, h_middle,
         colorscale = log10,
         colorrange = (min, max(min, maximum(data))), lowclip = ("white", 0),
         show_generators = false, strokewidth = 0,)
-    rlims!(ax, 0.0, 5.0)
+    rlims!(ax, 0.0, 10.0)
     l1 = lines!(ax, p_middle, r_middle[i_max],
         color= "red", label = "Max Production")
     l2 = contour!(ax, p_middle, r_middle, data, 
@@ -633,7 +837,7 @@ end
 
 
 
-for h_ind in [8]#, 5, 8, 13, 23]
+for h_ind in [18]#, 5, 8, 13, 23]
     plot_histogram_phase_rdist_normalised(dir, E0, lim_pitch_deg, h_middle, r_middle, p_middle, his_hrp_norm, r_gyro_mean, h_ind)
 end
 
