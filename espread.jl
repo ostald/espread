@@ -355,37 +355,6 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         hintervals])
     end
     
-    """
-    res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")* ".jld2")
-    jldopen(res_file, "w") do file
-        setup = JLD2.Group(file, "setup")
-        setup["E0"] = E0
-        setup["lim_pitch_deg"] = lim_pitch_deg
-        setup["seed_value"] = seed_value
-        setup["hmin"] = hmin
-        setup["hmax"] = hmax
-        setup["hinterval"] = hintervals
-    end
-
-    
-    jldsave(res_file;
-        E0,
-        lim_pitch_deg,
-        seed_value,
-        hmin,
-        hmax,
-        hintervals)
-    """
-
-    #res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")*".txt")
-    #open(res_file, "w") do file
-    #    write(file, "E0 = $E0\n")
-    #    write(file, "lim_pitch_deg = $lim_pitch_deg\n")
-    #    write(file, "seed_value = $seed_value\n")
-    #    write(file, "hmin = $hmin\n")
-    #    write(file, "hmax = $hmax\n")
-    #    write(file, "hintervals = $hintervals\n\n")
-    #end
     println("res_file = ", res_file)
     
     lim_pitch = lim_pitch_deg/180*pi
@@ -417,13 +386,6 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
         #name = lpad(n_e_sim, 5, "0")
 
-        #saving 
-        #jldopen(res_file, "a+") do file # open read/write, preserving contents of existing file or creating a new file
-        #    file[name] = df
-        #end
-        #data = load(res_file)
-
-
         """
         open(res_file, "a+") do io
             serialize(io, df)
@@ -447,25 +409,6 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     return nothing
 end
 
-
-#E0 = 4000 #eV
-#@time main(Int(E0), 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c)
-"""
-using Distributed
-procs = addprocs(2)
-
-@everywhere procs begin Base.MainInclude.eval(include("espread.jl")) end
-f = @spawnat 2  main(E0, 2, alt0, lim_pitch, loc_gmag, loc_geod)
-ff = fetch(f)
-
-
-for E0 in e_energy
-    for lim_pitch_deg in pitch_limits
-        lim_pitch = lim_pitch_deg/180*pi
-        main(E0, N_electrons, alt0, lim_pitch, res_dir, loc_gmag, loc_geod)
-    end
-end
-"""
 
 
 """

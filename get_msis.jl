@@ -72,3 +72,58 @@ function make_densityf(hmin, hmax, hintervals, loc_geod)
     atm = Float64.(atmospheric_model_fast([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2]))
     return densityf_fast(alt) = atm[round(Int, (alt-hmin)/hintervals+1), :]
 end
+
+
+"""
+atm = msis([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
+lines([(a.N_number_density + 
+    a.aO_number_density + 
+    a.Ar_number_density  
+    #a.H_number_density 
+    #a.He_number_density
+    )/ 
+    (a.N2_number_density + 
+    a.O2_number_density + 
+    a.O_number_density + 
+    a.N_number_density + 
+    a.aO_number_density + 
+    a.Ar_number_density + 
+    a.H_number_density + 
+    a.He_number_density) for a in atm][:], hmsis/1e3)
+
+lines([(a.H_number_density 
+    )/ 
+    (a.N2_number_density + 
+    a.O2_number_density + 
+    a.O_number_density + 
+    a.N_number_density + 
+    a.aO_number_density + 
+    a.Ar_number_density + 
+    a.H_number_density + 
+    a.He_number_density) for a in atm][:], hmsis/1e3)
+
+
+lines([(a.He_number_density 
+    )/ 
+    (a.N2_number_density + 
+    a.O2_number_density + 
+    a.O_number_density + 
+    a.N_number_density + 
+    a.aO_number_density + 
+    a.Ar_number_density + 
+    a.H_number_density + 
+    a.He_number_density) for a in atm][:], hmsis/1e3)
+
+
+fig, ax, l = lines([a.He_number_density 
+    for a in atm][:], hmsis/1e3, axis = (xscale = log10,),)
+lines!([a.H_number_density 
+    for a in atm][:], hmsis/1e3)
+lines!([a.N2_number_density 
+    for a in atm][:], hmsis/1e3)
+lines!([a.O2_number_density 
+    for a in atm][:], hmsis/1e3)
+lines!([a.O_number_density 
+    for a in atm][:], hmsis/1e3)
+display(fig)
+"""

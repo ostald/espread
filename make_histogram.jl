@@ -63,9 +63,9 @@ for file in dir_con_raw
     end
 
 
-    x_edges = collect(-20.5:1:20.5)
+    x_edges = collect(-20.5:0.1:20.5)
     y_edges = copy(x_edges)
-    z_edges = collect(80e3:1e2:600e3)
+    z_edges = collect(80e3:1e3:600e3)
 
     x_middle = x_edges[1:end-1] + diff(x_edges)/2
     y_middle = y_edges[1:end-1] + diff(y_edges)/2
