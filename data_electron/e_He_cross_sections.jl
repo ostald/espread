@@ -1,6 +1,6 @@
 using DataInterpolations: LinearInterpolation, PCHIPInterpolation, ExtrapolationType
 
-function e_He_elastic(Ep)
+function e_Heelastic(Ep)
     E=[5.000E-02,   1.500E-01,   2.500E-01,   3.500E-01,   4.500E-01,
        5.500E-01,   6.500E-01,   7.500E-01,   8.500E-01,   9.500E-01,
        1.100E+00,   1.300E+00,   1.500E+00,   1.700E+00,   1.900E+00,
@@ -696,7 +696,7 @@ end
 
 function e_He4Dt(Ep)
     #		<Process name="He+e -> He(4Dt)" electrons="0" threshold="23.77">
-	E_trh = 23.77
+	E_thr = 23.77
     #			<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
     E = [#			<Egrid unit="eV">
     2.407E+01, 2.427E+01, 2.466E+01, 2.589E+01, 2.717E+01, 2.921E+01, 3.116E+01,
@@ -752,7 +752,7 @@ end
 
 function e_He4Ds(Ep)
     #		<Process name="He+e -> He(4Ds)" electrons="0" threshold="23.77">
-    E_trh = 23.77
+    E_thr = 23.77
 #			<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
     E = [#			<Egrid unit="eV">
     2.383E+01, 2.899E+01, 3.154E+01, 3.430E+01, 3.766E+01, 4.096E+01, 4.497E+01,
@@ -923,7 +923,7 @@ function e_He4Fs(Ep)
     return cross_section
 end	
 
-function e_He_4Ps(Ep)
+function e_He4Ps(Ep)
     #		<Process name="He+e -> He(4Ps)" electrons="0" threshold="23.77">
     E_thr = 23.77
     #		<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
@@ -988,7 +988,7 @@ function e_He_4Ps(Ep)
 end	
 
 
-function e_He_ionX(Ep)
+function e_HeionX(Ep)
     #		<Process name="He+e->He+" electrons="1" threshold="24.6">
     E_thr = 24.6
     #		<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
@@ -1018,7 +1018,6 @@ function e_He_ionX(Ep)
     6.323E-18, 5.724E-18, 5.191E-18, 4.659E-18, 4.126E-18, 3.594E-18, 3.062E-18, 
     2.596E-18, 2.263E-18, 1.997E-18, 1.664E-18, 1.398E-18, 1.331E-18
     ]		
-
     # Source: aeroplanets https://github.com/space-physics/aeroplanets/blob/main/data/CrossSections/ElectronHe.xml
 
     cross_section = [

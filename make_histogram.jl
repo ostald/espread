@@ -6,6 +6,7 @@ include("constants.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
+dir = "results/r7_conicB_16kev2026-01-13T18:15:19.323/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -13,7 +14,8 @@ if !isdir(joinpath(dir, "hist"))
     mkdir(joinpath(dir, "hist"))
 end
 
-for file in dir_con_raw
+#for file in dir_con_raw
+    file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
 

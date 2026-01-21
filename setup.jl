@@ -9,10 +9,10 @@ b_model = "vertical"
 # Define initial energy
 #E0 = 1e4 #eV
 #e_energy = [500, 1e3, 2e3, 4e3, 8e3]
-e_energy = [16e3]
+e_energy = [500]
 
 # Define number of particles
-N_electrons = 1e6
+N_electrons = 1e3
 
 # starting altitude
 alt0 = 600e3 #m
@@ -40,7 +40,7 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "r7_conicB_16kev"
+name = "r9_test_conicB_He_500eV"
 res_dir = joinpath("results", name * string(now()))
 
 nprocesses = 200
