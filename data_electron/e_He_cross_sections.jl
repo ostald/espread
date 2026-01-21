@@ -366,11 +366,11 @@ function e_He3Pt(Ep)
 
     cross_section[Ep .< 23.038] .= 0
     
-    f, a, sc = scatter(E, s, axis= (xscale = log10, yscale = log10))
-    Ep = logrange(1e-2, 1e5, 800)
-    lines!(a, Ep, cross_section)
-    Ep = [23.038]
-    scatter!(a, Ep, cross_section)
+    #f, a, sc = scatter(E, s, axis= (xscale = log10, yscale = log10))
+    #Ep = logrange(1e-2, 1e5, 800)
+    #lines!(a, Ep, cross_section)
+    #Ep = [23.038]
+    #scatter!(a, Ep, cross_section)
 
     return cross_section
 end	
@@ -1051,7 +1051,7 @@ function e_HeionX(Ep)
 end	
 
 
-function e_He_ionion(Ep)
+function e_Heionion(Ep)
     #		<Process name="He+e->He++" electrons="2" threshold="79">
     E_thr = 79
     #    		<Source type="adaptation">Pindzola 2007</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->

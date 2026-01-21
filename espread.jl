@@ -106,7 +106,8 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     v_n3 =  v0_par .* u3
     v0 = v_n1 .+ v_n2 .+ v_n3
 
-    status, r, v, t = ode_boris_mover_mfp(1e-6, r0, v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = true, nPerGyro = nPerGyro)
+    #todo: instead of controlling mfp, just do nPerGyro steps
+    status, r, v, t = ode_boris_mover_mfp(1e-3, r0, v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = true, nPerGyro = nPerGyro)
     
     #error in gyrocenter:
     dr = sum(r[:, 1:nPerGyro], dims = 2) ./ nPerGyro
@@ -367,17 +368,17 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
     io = open(res_file, "a")
     while n_e_sim <= N_electrons
-        #println("Electron number: ", n_e_sim)
+        println("Electron number: ", n_e_sim)
         #record = []
 
-        try
+        #try
             r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
             propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
-        catch
-            println("re-initiating electron")
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
-            propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
-        end
+        #catch
+        #    println("re-initiating electron")
+        #    r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
+        #    propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
+        #end
         
         #df = DataFrame(Generation = Int[], idx_scatter = Int[], r0 = Vector{Float64}[], v0 = Vector{Float64}[], status = Int[], r = Vector{Float64}[], v = Vector{Float64}[])
         #for rr in record
