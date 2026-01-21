@@ -14,11 +14,14 @@ function load_result(file)
 
     io = open(file, "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = deserialize(io)
-    data = [deserialize(io) for _ in 1:Int(1e6) if !eof(io)]
-    close(io)
-    for d in data
-        push!(df, d)
+    while !eof(io)
+        try
+            push!(df, deserialize(io))
+        catch
+            nothing
+        end
     end
+    close(io)
     return E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df
 end
 
