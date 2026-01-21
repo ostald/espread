@@ -56,6 +56,7 @@ function atmospheric_model_fast(times, heights, lats, longs)
     nO  = [a.O_number_density  for a in atm_matrix]
     nHe = [a.He_number_density for a in atm_matrix]
     return stack([nN2, nO2, nO, nHe])
+#    return stack([nN2, nO2, nO])
 end
 """
 function consolidate_msis(atm)

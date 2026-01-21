@@ -29,11 +29,14 @@ for batch in 1:1000
 end
 
 
-"""
+
 include("setup.jl")
 mkdir(res_dir)
 include("espread.jl")
 batch = 0
+E0 = e_energy[1]
+lim_pitch_deg = pitch_limits_deg[1]
+@time main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro)
 @profview main(E0, 10, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro)
 """
 

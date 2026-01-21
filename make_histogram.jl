@@ -14,8 +14,8 @@ if !isdir(joinpath(dir, "hist"))
     mkdir(joinpath(dir, "hist"))
 end
 
-#for file in dir_con_raw
-    file = dir_con_raw[2]
+for file in dir_con_raw
+#    file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
 

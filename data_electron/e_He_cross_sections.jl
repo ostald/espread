@@ -43,6 +43,9 @@ function e_Heelastic(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
+
 
     cross_section[Ep .< 5e-2] .= 0
     
@@ -95,6 +98,8 @@ function e_He2St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 19.847] .= 0
     
@@ -137,6 +142,8 @@ function e_He2Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 20.63] .= 0
     
@@ -183,6 +190,8 @@ function e_He2Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 20.993] .= 0
     
@@ -227,6 +236,8 @@ function e_He2Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 21.247] .= 0
     
@@ -274,6 +285,8 @@ function e_He3St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 22.749] .= 0
     
@@ -320,6 +333,8 @@ function e_He3Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 22.951] .= 0
     
@@ -363,6 +378,8 @@ function e_He3Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.038] .= 0
     
@@ -412,6 +429,8 @@ function e_He3Dt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.105] .= 0
     
@@ -451,6 +470,8 @@ function e_He3Ds(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.105] .= 0
     
@@ -502,6 +523,8 @@ function e_He3Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.118] .= 0
     
@@ -562,6 +585,8 @@ function e_He4St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.626] .= 0
     
@@ -616,6 +641,8 @@ function e_He4Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.626] .= 0
     
@@ -671,6 +698,8 @@ function e_He4Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -724,6 +753,8 @@ function e_He4Dt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -788,6 +819,8 @@ function e_He4Ds(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -843,6 +876,8 @@ function e_He4Ft(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -901,6 +936,8 @@ function e_He4Fs(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -965,6 +1002,8 @@ function e_He4Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -1028,6 +1067,8 @@ function e_HeionX(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -1073,6 +1114,8 @@ function e_Heionion(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
