@@ -18,6 +18,7 @@ for file in dir_con_raw
 #    file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
+    #if size(df, 1) < 10000 println(file * "contains too little ionizations") end
 
     df.E0 = E_ev.(norm.(df.v0))
     df.E_end = E_ev.(norm.(df.v))
