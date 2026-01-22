@@ -43,7 +43,7 @@ loc_geod = loc_geod_deg ./ 180 * pi
 name = "r8_conicB_He_500eV_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 200
+nprocesses = 100
 
 
 
