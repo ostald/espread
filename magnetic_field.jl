@@ -26,6 +26,7 @@ end
 
 convergent_vertical_field_demo!, convergent_vertical_field_demo = make_convergent_vertical_field_demo(c)
 
+"""
 zz = c.re .+ [0, 100, 200, 300, 400, 500, 600].*1e3 #.+ 500e3
 yy = [-20, -10, 0, 10, 20.0] 
 using WGLMakie

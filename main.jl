@@ -18,7 +18,7 @@ sleep(60)
 
 
 #global i_proc = 1
-for batch in 1:1
+for batch in 2:100
     for E0 in e_energy
         @distributed for pitch_lim_deg in pitch_limits_deg
                 @time main(E0, N_electrons, alt0, pitch_lim_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=batch)

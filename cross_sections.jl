@@ -86,3 +86,106 @@ cs_all_sum(Ep) = sum.(cs_all(Ep))
 #sigma_tot_list(Ep) = cs_all(Ep)    
 
 
+
+"""
+"""
+using CairoMakie
+Ep = logrange(1e-1, 1e5, 800)
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+for sig in eachrow(sp_all)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+axlislegend(a)
+display(f)
+save("figures/cross_sections.png", f)
+
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+for sig in eachrow(sp_N2)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+axislegend(a)
+display(f)
+save("figures/cross_sections_N2.png", f)
+
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+for sig in eachrow(sp_O2)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+axislegend(a)
+display(f)
+save("figures/cross_sections_O2.png", f)
+
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+for sig in eachrow(sp_O)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+axislegend(a)
+display(f)
+save("figures/cross_sections_O.png", f)
+
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+for sig in eachrow(sp_He)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+axislegend(a)
+display(f)
+save("figures/cross_sections_He.png", f)

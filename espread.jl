@@ -368,7 +368,9 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
     io = open(res_file, "a")
     while n_e_sim <= N_electrons
-        println("Electron number: ", n_e_sim)
+        if mod(n_e_sim, 10) == 0
+            println(lim_pitch_deg, " ", E0, " Electron number: ", n_e_sim)
+        end
         #record = []
 
         try

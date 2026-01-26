@@ -6,6 +6,8 @@ include("constants.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
+dir = "results/r7_conicB_16kev2026-01-22T11:49:34.639/"
+dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
