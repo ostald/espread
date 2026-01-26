@@ -6,7 +6,7 @@ include("constants.jl")
 function make_convergent_vertical_field_demo(c)
     z0 = (c.re + 80e3) #z0 at 80km above earth radius
     c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
-    dBdz = -6*c1 / z0^4 * 2e3                               #factor 2e3
+    dBdz = -6*c1 / z0^4                                #factor 2e3
     function convergent_vertical_field!(B, p)
         B[1] = 1/2 * p[1] * dBdz
         B[2] = 1/2 * p[2] * dBdz
@@ -25,14 +25,26 @@ end
 
 
 convergent_vertical_field_demo!, convergent_vertical_field_demo = make_convergent_vertical_field_demo(c)
-"""
-zz = [100, 200, 300, 400, 500]*1e3 .+ 500e3
-yy = [-200, -100, 0, 100, 200.0] .*2
-using GLMakie
+
+zz = c.re .+ [0, 100, 200, 300, 400, 500, 600].*1e3 #.+ 500e3
+yy = [-20, -10, 0, 10, 20.0] 
+using WGLMakie
 p = [Point3([0, y, z]) for y in yy for z in zz]
 v = Vec3.(convergent_vertical_field_demo.(p))
-f = arrows3d(p, v, lengthscale = 1e6, axis=(type=Axis3, azimuth = 0, elevation = 0),)
-save("figures/conicB.png", f)
+s = sqrt.(dot.(v, transpose.(v))).*1e6
+fig, ax, arr = arrows2d(Point2.([[pp[2], pp[3]/1e3 - c.re/1e3] for pp in p]),
+    Point2.([[pp[2], pp[3]/1e3] for pp in v]), 
+    lengthscale = 1e9/1.5, 
+    color = s, 
+    align = :center, 
+    colormap = :batlow,
+    #axis=(type=Axis3, azimuth = 0, elevation = 0),
+    axis = (xlabel = "Horizontal Distance [m]", 
+        ylabel = "Altitude [km]")
+    )
+Colorbar(fig[1, 2], arr, label = "Magnetic Field [mT]")
+fig
+save("figures/conicB.png", fig)
 """
 
 function make_convergent_vertical_field(c)
