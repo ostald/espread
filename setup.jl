@@ -9,7 +9,7 @@ b_model = "vertical"
 # Define initial energy
 #E0 = 1e4 #eV
 #e_energy = [500, 1e3, 2e3, 4e3, 8e3]
-e_energy = [4e3, 1e4, 4e4]
+e_energy = [4e3]
 
 # Define number of particles
 N_electrons = 1e3
@@ -23,7 +23,7 @@ alt0 = 600e3 #m
 #Bin! = dipole_field_earth!
 #Bin! = convergent_vertical_field!
 
-pitch_limits_deg = [10, 20, 30, 40, 50, 60, 70, 80]
+pitch_limits_deg = [20, 90]
 #pitch_limits_deg = [60]
 
 nPerGyro = 20
@@ -40,7 +40,7 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "r9_pitchAngle"
+name = "r10_scatter45deg_"
 res_dir = joinpath("results", name * string(now()))
 
 nprocesses = 100
