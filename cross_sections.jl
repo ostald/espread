@@ -86,15 +86,33 @@ cs_all_sum(Ep) = sum.(cs_all(Ep))
 #sigma_tot_list(Ep) = cs_all(Ep)    
 
 
-
-"""
 """
 using CairoMakie
-Ep = logrange(1e-1, 1e5, 800)
-f, a, lin = scatter(1, 1, 
+
+Ep = logrange(1e-1, 1e6, 700)
+
+for sig in eachrow(sp_all)
+    f, a, lin = scatter(1, 1, 
     axis= (xscale = log10,
         yscale = log10,
         limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+    axislegend(a)
+    display(f)
+end
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e6), (1e-25, 1e-18)),
         ),
     )
 for sig in eachrow(sp_all)
@@ -189,3 +207,4 @@ end
 axislegend(a)
 display(f)
 save("figures/cross_sections_He.png", f)
+"""

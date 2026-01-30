@@ -19,6 +19,7 @@ WGLMakie.activate!()
 include("analysis_util.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
@@ -1407,7 +1408,7 @@ end
 
 
 #dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-kdeio = open(joinpath(dir, "hist_summed", "h_xyz_1000.0eV_90.0deg_summed.hist"), "r")
+io = open(joinpath(dir, "hist_summed", "h_xyz_1000.0eV_90.0deg_summed.hist"), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
 close(io)
 x_edges = his_xyz.edges[1]

@@ -4,6 +4,7 @@ include("analysis_util.jl")
 include("constants.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -40,7 +41,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         #choose ending position for primary electrons, starting position for secondaries:
         df.pos_earth_centered = ifelse.(df.generation .== 1, df.r, df.r0)
          
-        if contains(dir, "conic")
+        #if contains(dir, "conic")
             p0 = [0, 0, c.re]
             #df.pos = [p - p0 for p in df.pos_earth_centered]
             for particle in eachrow(filter(:alt_end => x-> x < 599e3, df)) #non-escaping
@@ -55,11 +56,11 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
                 push!(df_primary_injection, (pos = (particle.r0 - p0) .* [1, 1, 1e3],)) 
             end
 
-        elseif contains(dir, "dipole")
-            error("not implemented yet")
-        else
-            error("unknown field model")
-        end
+        #elseif contains(dir, "dipole")
+        #    error("not implemented yet")
+        #else
+        #    error("unknown field model")
+        #end
     end
 
 
@@ -121,7 +122,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     xlims!(ax, -30, 30)
     sleep(2)
     axislegend() 
-    save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_v2.png"), fig)
+    save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_pitchAngle.png"), fig)
 
 #end
 

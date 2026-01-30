@@ -7,7 +7,7 @@ include("constants.jl")
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r6_conicB_60deg2025-10-30T18:33:32.886/"
 dir = "results/r7_conicB_16kev2026-01-22T11:49:34.639/"
-dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
+dir = "results/r10_scatter45deg_2026-01-26T17:12:40.089/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -18,6 +18,11 @@ end
 for file in dir_con_raw
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
+    n_electrons = size(filter(x -> x.generation == 1, df), 1)
+    if n_electrons != 1000
+        println("number of electrons in this batch: ", n_electrons)
+    end
+    @assert n_electrons == 1000
 
     df.E0 = E_ev.(norm.(df.v0))
     df.E_end = E_ev.(norm.(df.v))
@@ -33,14 +38,14 @@ for file in dir_con_raw
 
     #choose ending position for primary electrons, starting position for secondaries:
     df.pos_earth_centered = ifelse.(df.alt0 .> 599e3, df.r, df.r0)
-    if contains(dir, "conic")
+    #if contains(dir, "conic")
         p0 = [0, 0, c.re]
         df.pos = [p - p0 for p in df.pos_earth_centered]
-    elseif contains(dir, "dipole")
-        error("not implemented yet")
-    else
-        error("unknown field model")
-    end
+    #elseif contains(dir, "dipole")
+    #    error("not implemented yet")
+    #else
+    #    error("unknown field model")
+    #end
 
 
     if contains(dir, "dipole")
