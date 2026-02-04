@@ -318,7 +318,7 @@ function scatter_ion_He(v_in, E_ionization)
     #println(string(Es_out/E_primary), "  ", string(Es_out))
     Ep_out = E_primary - Es_out - E_ionization
     @assert Ep_out > 0
-    if Es_out > E_primary
+    if Es_out > E_primary/4
         theta = pi/4
         phi = rand()*2*pi
         vp_out = scatter_particle(v_in, Ep_out, theta, phi)
