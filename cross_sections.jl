@@ -2,6 +2,7 @@
 include("data_electron/e_N2_cross_sections.jl")
 include("data_electron/e_O2_cross_sections.jl")
 include("data_electron/e_O_cross_sections.jl")
+include("data_electron/e_He_cross_sections.jl")
 include("scattering.jl")
 
 using DelimitedFiles: readdlm
@@ -38,6 +39,10 @@ function get_scattering_parameters(species_name)
         scat_par[:, 6] .= scatter_inelastic_O
         scat_par[1, 6]  = scatter_elastic_O
         scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_O
+    elseif species_name == "He"
+        scat_par[:, 6] .= scatter_inelastic_He
+        scat_par[1, 6]  = scatter_elastic_He
+        scat_par[scat_par[:, 3] .> 0, 6] .= scatter_ion_He
     end
     
     """
@@ -53,6 +58,10 @@ function get_scattering_parameters(species_name)
         scat_par[:, 6] .= ["O", "inelastic"] 
         scat_par[1, 6]  = ["O", "elastic"]
         scat_par[scat_par[:, 3] .> 0, 6] .= ["O", "ionizing"]
+    elseif species_name == "He"
+        scat_par[:, 6] .= ["He", "inelastic"] 
+        scat_par[1, 6]  = ["He", "elastic"]
+        scat_par[scat_par[:, 3] .> 0, 6] .= ["He", "ionizing"]
     end
     """
 
@@ -66,17 +75,22 @@ end
 sp_N2 = get_scattering_parameters("N2")
 sp_O2 = get_scattering_parameters("O2")
 sp_O  = get_scattering_parameters("O")
+sp_He = get_scattering_parameters("He")
 
 # cross section functions
 cs_e_N2(Ep) = only.([cs([float(Ep)]) for cs in sp_N2[:, 4]])
 cs_e_O2(Ep) = only.([cs([float(Ep)]) for cs in sp_O2[:, 4]])
 cs_e_O(Ep)  = only.([cs([float(Ep)]) for cs in sp_O[:, 4]])
+cs_e_He(Ep) = only.([cs([float(Ep)]) for cs in sp_He[:, 4]])
 
 # stacked, so it can be multiplies by a vector of densities: 
 # cs_all(Ep) .* [nN2, nO2, nO]
 # be aware of ordering!
-cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep)]::Vector{Vector{Float64}}
-sp_all = [sp_N2; sp_O2; sp_O]
+
+cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep), cs_e_He(Ep)]::Vector{Vector{Float64}}
+#cs_all(Ep) = [cs_e_N2(Ep), cs_e_O2(Ep), cs_e_O(Ep)]::Vector{Vector{Float64}}
+sp_all = [sp_N2; sp_O2; sp_O; sp_He]
+#sp_all = [sp_N2; sp_O2; sp_O]
 
 # summed for total cross section:
 cs_all_sum(Ep) = sum.(cs_all(Ep))

@@ -214,3 +214,5 @@ hist([E_secondary[findfirst(cdf_discrete .> r)] for r in rand(nsample)],
 lines!(E_secondary, pdf_discrete*nsample*dEs)
 display(current_figure())
 """
+
+

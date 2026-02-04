@@ -1,6 +1,6 @@
 using DataInterpolations: LinearInterpolation, PCHIPInterpolation, ExtrapolationType
 
-function e_He_elastic(Ep)
+function e_Heelastic(Ep)
     E=[5.000E-02,   1.500E-01,   2.500E-01,   3.500E-01,   4.500E-01,
        5.500E-01,   6.500E-01,   7.500E-01,   8.500E-01,   9.500E-01,
        1.100E+00,   1.300E+00,   1.500E+00,   1.700E+00,   1.900E+00,
@@ -43,6 +43,9 @@ function e_He_elastic(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
+
 
     cross_section[Ep .< 5e-2] .= 0
     
@@ -95,6 +98,8 @@ function e_He2St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 19.847] .= 0
     
@@ -137,6 +142,8 @@ function e_He2Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 20.63] .= 0
     
@@ -183,6 +190,8 @@ function e_He2Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 20.993] .= 0
     
@@ -227,6 +236,8 @@ function e_He2Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 21.247] .= 0
     
@@ -274,6 +285,8 @@ function e_He3St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 22.749] .= 0
     
@@ -320,6 +333,8 @@ function e_He3Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 22.951] .= 0
     
@@ -363,14 +378,16 @@ function e_He3Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.038] .= 0
     
-    f, a, sc = scatter(E, s, axis= (xscale = log10, yscale = log10))
-    Ep = logrange(1e-2, 1e5, 800)
-    lines!(a, Ep, cross_section)
-    Ep = [23.038]
-    scatter!(a, Ep, cross_section)
+    #f, a, sc = scatter(E, s, axis= (xscale = log10, yscale = log10))
+    #Ep = logrange(1e-2, 1e5, 800)
+    #lines!(a, Ep, cross_section)
+    #Ep = [23.038]
+    #scatter!(a, Ep, cross_section)
 
     return cross_section
 end	
@@ -412,6 +429,8 @@ function e_He3Dt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.105] .= 0
     
@@ -451,6 +470,8 @@ function e_He3Ds(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.105] .= 0
     
@@ -502,6 +523,8 @@ function e_He3Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.118] .= 0
     
@@ -562,6 +585,8 @@ function e_He4St(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.626] .= 0
     
@@ -616,6 +641,8 @@ function e_He4Ss(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< 23.626] .= 0
     
@@ -671,6 +698,8 @@ function e_He4Pt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -696,7 +725,7 @@ end
 
 function e_He4Dt(Ep)
     #		<Process name="He+e -> He(4Dt)" electrons="0" threshold="23.77">
-	E_trh = 23.77
+	E_thr = 23.77
     #			<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
     E = [#			<Egrid unit="eV">
     2.407E+01, 2.427E+01, 2.466E+01, 2.589E+01, 2.717E+01, 2.921E+01, 3.116E+01,
@@ -724,6 +753,8 @@ function e_He4Dt(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -752,7 +783,7 @@ end
 
 function e_He4Ds(Ep)
     #		<Process name="He+e -> He(4Ds)" electrons="0" threshold="23.77">
-    E_trh = 23.77
+    E_thr = 23.77
 #			<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
     E = [#			<Egrid unit="eV">
     2.383E+01, 2.899E+01, 3.154E+01, 3.430E+01, 3.766E+01, 4.096E+01, 4.497E+01,
@@ -788,6 +819,8 @@ function e_He4Ds(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -843,6 +876,8 @@ function e_He4Ft(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -901,6 +936,8 @@ function e_He4Fs(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -923,7 +960,7 @@ function e_He4Fs(Ep)
     return cross_section
 end	
 
-function e_He_4Ps(Ep)
+function e_He4Ps(Ep)
     #		<Process name="He+e -> He(4Ps)" electrons="0" threshold="23.77">
     E_thr = 23.77
     #		<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
@@ -965,6 +1002,8 @@ function e_He_4Ps(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -988,7 +1027,7 @@ function e_He_4Ps(Ep)
 end	
 
 
-function e_He_ionX(Ep)
+function e_HeionX(Ep)
     #		<Process name="He+e->He+" electrons="1" threshold="24.6">
     E_thr = 24.6
     #		<Source type="adaptation">Ralchenko 2008</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
@@ -1018,7 +1057,6 @@ function e_He_ionX(Ep)
     6.323E-18, 5.724E-18, 5.191E-18, 4.659E-18, 4.126E-18, 3.594E-18, 3.062E-18, 
     2.596E-18, 2.263E-18, 1.997E-18, 1.664E-18, 1.398E-18, 1.331E-18
     ]		
-
     # Source: aeroplanets https://github.com/space-physics/aeroplanets/blob/main/data/CrossSections/ElectronHe.xml
 
     cross_section = [
@@ -1029,6 +1067,8 @@ function e_He_ionX(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     
@@ -1052,7 +1092,7 @@ function e_He_ionX(Ep)
 end	
 
 
-function e_He_ionion(Ep)
+function e_Heionion(Ep)
     #		<Process name="He+e->He++" electrons="2" threshold="79">
     E_thr = 79
     #    		<Source type="adaptation">Pindzola 2007</Source> <!-- types : measurement, bratio, theory, review, adaptation, unknown -->
@@ -1074,6 +1114,8 @@ function e_He_ionion(Ep)
     cross_section = exp.(cross_section)
 
     cross_section[.!isfinite.(cross_section)] .= 0
+    
+    cross_section = cross_section / 1e4
 
     cross_section[Ep .< E_thr] .= 0
     

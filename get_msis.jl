@@ -19,6 +19,7 @@ function atmospheric_model(times, heights, lats, longs)
     nN2 = [a.N2_number_density for a in atm_matrix]
     nO2 = [a.O2_number_density for a in atm_matrix]
     nO  = [a.O_number_density  for a in atm_matrix]
+    nHe = [a.He_number_density for a in atm_matrix]
     """
     pn = propertynames(atm[1])
     atm = [getproperty(a, p) for a in atm_matrix, p in pn]  
@@ -38,7 +39,8 @@ function atmospheric_model(times, heights, lats, longs)
     nN2_ip(hh) = exp(Interpolator(heights, log.(nN2))(hh))
     nO2_ip(hh) = exp(Interpolator(heights, log.(nO2))(hh))
     nO_ip(hh)  = exp(Interpolator(heights, log.(nO))(hh))
-    densities(hh) = [nN2_ip(hh), nO2_ip(hh), nO_ip(hh)]
+    nHe_ip(hh) = exp(Interpolator(heights, log.(nHe))(hh))
+    densities(hh) = [nN2_ip(hh), nO2_ip(hh), nO_ip(hh), nHe_ip(hh)]
     return densities
     """
     f, ax, lin = scatter(nO, heights, axis=(xscale=log10,),)
@@ -52,7 +54,9 @@ function atmospheric_model_fast(times, heights, lats, longs)
     nN2 = [a.N2_number_density for a in atm_matrix]
     nO2 = [a.O2_number_density for a in atm_matrix]
     nO  = [a.O_number_density  for a in atm_matrix]
-    return stack([nN2, nO2, nO])
+    nHe = [a.He_number_density for a in atm_matrix]
+    return stack([nN2, nO2, nO, nHe])
+#    return stack([nN2, nO2, nO])
 end
 """
 function consolidate_msis(atm)
