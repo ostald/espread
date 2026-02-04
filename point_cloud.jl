@@ -18,12 +18,13 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
     files = files[1:2]
 
+    df = DataFrame()
     df_ion = DataFrame()
     df_primary_injection = DataFrame()
     df_escaping = DataFrame()
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
 
-    @time for (id, file) in enumerate(files)
+    #@time for (id, file) in enumerate(files)
         E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
         
         #df.E0 = E_ev.(norm.(df.v0))
@@ -63,6 +64,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         #end
     end
 
+    fig, ax, h = hist(df_ion.pos)
 
     alpha = 0.25
     markersize = 1
@@ -116,8 +118,8 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     #sc = scatter!(ax,Point3.(df.pos), markersize = 1, alpha = 0.25, transparency = true)#,
         #axis=(limits=(nothing, nothing, nothing),),)
     #sleep(2)
-    zlims!(ax, 599.9999, 600.0001)
-    zlims!(ax, 60, 6.4e2)
+    #zlims!(ax, 599.9999, 600.0001)
+    #zlims!(ax, 60, 6.4e2)
     ylims!(ax, -30, 30)
     xlims!(ax, -30, 30)
     sleep(2)
@@ -135,6 +137,7 @@ for r in runs[9:end]
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
     #files = files[1:2]
 
+    df = DataFrame()
     df_ion = DataFrame()
     df_primary_injection = DataFrame()
     df_escaping = DataFrame()
