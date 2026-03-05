@@ -169,6 +169,30 @@ f, a, lin = scatter(1, 1,
         limits = ((1e-1, 1e5), (1e-25, 1e-18)),
         ),
     )
+for sig in eachrow(sp_N2)
+    if occursin("rot", sig[1]) || occursin("vib", sig[1])
+        continue
+    end
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1])
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+xlims!(1, 1e5)
+axislegend(a)
+display(f)
+save("figures/cross_sections_N2_partial.png", f)
+
+
+f, a, lin = scatter(1, 1, 
+    axis= (xscale = log10,
+        yscale = log10,
+        limits = ((1e-1, 1e5), (1e-25, 1e-18)),
+        ),
+    )
 for sig in eachrow(sp_O2)
     if sig[2] == 0.0
         lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
@@ -221,4 +245,70 @@ end
 axislegend(a)
 display(f)
 save("figures/cross_sections_He.png", f)
+
+
+##
+f = Figure(size= (600, 800))
+axs = [Axis(f[i, 1], 
+        xscale = log10,
+        yscale = log10,
+        ylabel = "Cross section [m⁻²]",
+        limits = ((1e0, 1e5), (1e-25, 1e-18)),) for i in 1:3]
+
+axs[3].xlabel = "Energy [eV]"
+axs[1].xtickformat = ""
+axs[2].xtickformat = ""
+axs[1].title = "N₂"
+axs[2].title = "O₂"
+axs[3].title = "O"
+
+a = axs[1]
+for sig in eachrow(sp_N2)
+    if occursin("rot", sig[1]) || occursin("vib", sig[1])
+        continue
+    end
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), #label = "elastic",
+        linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), #label = sig[1], 
+        linewidth = 1)
+    else
+        lines!(a, Ep, sig[4](Ep), #label = sig[1], 
+        linestyle = :dashdot)
+    end
+end
+lines!(a, 0, 0, label = "elastic", linewidth = 2, color = "black")
+lines!(a, 0, 0, label = "inlastic", linewidth = 1, color = "black")
+lines!(a, 0, 0, label = "ionoizing", linestyle = :dashdot, color = "black")
+axislegend(a)
+display(f)
+
+a = axs[2]
+for sig in eachrow(sp_O2)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linewidth = 1)
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+#axislegend(a)
+display(f)
+
+a = axs[3]
+for sig in eachrow(sp_O)
+    if sig[2] == 0.0
+        lines!(a, Ep, sig[4](Ep), label = "elastic", linewidth = 2)
+    elseif sig[3] == 0
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linewidth = 1)
+    else
+        lines!(a, Ep, sig[4](Ep), label = sig[1], linestyle = :dashdot)
+    end
+end
+display(f)
+save("figures/cross_sections_N2_panel.png", f, px_per_unit = 3.3)
+
+
 """

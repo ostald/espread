@@ -2,10 +2,17 @@ using LinearAlgebra
 using StaticArrays
 include("constants.jl")
 
+"""
+k0 = μ0 m / 4π [Tm3 = Nm2/A]
+m [Am2]: dipole moment (strength of the dipole)
+μ0 = 4π 1e-7 N/A2: vacuum permeability
+For the Earth's dipole:
+k0 = 8e15 Tm3
+"""
 
 function make_convergent_vertical_field_demo(c)
     z0 = (c.re + 80e3) #z0 at 80km above earth radius
-    c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
+    c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7; m - magnetic dipole moment 8.22e22
     dBdz = -6*c1 / z0^4                                #factor 2e3
     function convergent_vertical_field!(B, p)
         B[1] = 1/2 * p[1] * dBdz

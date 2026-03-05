@@ -23,7 +23,7 @@ include("get_msis.jl")
 
 
 #using GLMakie
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, pitch_angle_distribution)
     ##
     # initialize new electron
     
@@ -53,8 +53,12 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     #phase = rand()*2*pi         # random phase angle
 
     #pitch = acos.(1 .-rand()*(1-cos(lim_pitch)))
-    pitch = acos.(1 .-rand()* 2* sin(lim_pitch/2)^2) #higher precision by avoiding subtraction
-    #pitch = lim_pitch #for pitchAngle run
+    if pitch_angle_distribution == "isotropic_below"
+        pitch = acos.(1 .-rand()* 2* sin(lim_pitch/2)^2) #higher precision by avoiding subtraction
+    elseif pitch_angle_distribution == "single_angle"
+        pitch = lim_pitch #for pitchAngle run
+    end
+    print("pitch angle: ", pitch)
     phase = rand()*2*pi
 
     """
@@ -314,7 +318,7 @@ end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0)
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0; pitch_angle_distribution = "isotropic_below")
 
     Bin!(B, p) = 0
     if b_model == "dipole"
@@ -357,6 +361,25 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         hintervals])
     end
     
+    #todo: save all parameters:
+    """
+    open(res_file, "w") do io
+        serialize(io,
+            [E0, 
+            N_electrons, 
+            alt0, 
+            lim_pitch_deg, 
+            loc_gmag, 
+            loc_geod, 
+            c, 
+            res_dir, 
+            b_model, 
+            nPerGyro, 
+            batch, 
+            pitch_angle_distribution])
+    end
+    """
+
     println("res_file = ", res_file)
     
     lim_pitch = lim_pitch_deg/180*pi
@@ -369,13 +392,13 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
 
     io = open(res_file, "a")
     while n_e_sim <= N_electrons
-        if mod(n_e_sim, 10) == 0
-            println(lim_pitch_deg, " ", E0, " Electron number: ", n_e_sim)
+        if mod(n_e_sim, 100) == 0
+            println(batch, " ", lim_pitch_deg, " ", E0, " Electron number: ", n_e_sim)
         end
         #record = []
 
         #try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, pitch_angle_distribution)
             propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
         #catch
         #    println("re-initiating electron")

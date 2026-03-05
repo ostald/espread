@@ -19,10 +19,21 @@ sleep(60)
 
 
 #global i_proc = 1
-for batch in 1:1000
+for batch in 1:nbatches
     for E0 in e_energy
         @distributed for pitch_lim_deg in pitch_limits_deg
-                @time main(E0, N_electrons, alt0, pitch_lim_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=batch)
+                @time main(E0, 
+                    N_electrons, 
+                    alt0, 
+                    pitch_lim_deg, 
+                    loc_gmag, 
+                    loc_geod, 
+                    c, 
+                    res_dir, 
+                    b_model, 
+                    nPerGyro; 
+                    batch=batch;
+                    pitch_angle_distribution = pitch_angle_distribution)
                 print("E0 = ", E0, "\npitch_lim_deg = ", pitch_lim_deg, "\nbatch = ", batch, "\n\n")
             #global i_proc = i_proc+1
         end
@@ -31,6 +42,14 @@ end
 
 
 """
+for i1 in 1:5
+    addprocs(1, env=["JULIA_WORKER_TIMEOUT" => "500"])
+    remotecall(include, 51+i1, "espread.jl" )
+    sleep(10)
+end
+
+Distributed.map_pid_wrkr(52)
+
 include("setup.jl")
 mkdir(res_dir)
 include("espread.jl")

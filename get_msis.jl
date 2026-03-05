@@ -79,10 +79,16 @@ end
 
 
 """
-atm = msis([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
-lines([(a.N_number_density + 
-    a.aO_number_density + 
-    a.Ar_number_density  
+hmsis = 80e3:1e3:600e3
+loc_geod_deg = [69.58, 19.23]
+loc_geod = loc_geod_deg ./ 180 * pi
+
+atm = msis([[2025, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
+f, ax, l = lines([(#a.N_number_density + 
+    a.O_number_density + 
+    #a.Ar_number_density  
+    a.N2_number_density +  
+    a.O2_number_density  
     #a.H_number_density 
     #a.He_number_density
     )/ 
@@ -94,8 +100,10 @@ lines([(a.N_number_density +
     a.Ar_number_density + 
     a.H_number_density + 
     a.He_number_density) for a in atm][:], hmsis/1e3)
+    xlims!(0.95, 1)
+display(f)
 
-lines([(a.H_number_density 
+lines([(a.Ar_number_density 
     )/ 
     (a.N2_number_density + 
     a.O2_number_density + 
@@ -119,15 +127,22 @@ lines([(a.He_number_density
     a.He_number_density) for a in atm][:], hmsis/1e3)
 
 
-fig, ax, l = lines([a.He_number_density 
-    for a in atm][:], hmsis/1e3, axis = (xscale = log10,),)
-lines!([a.H_number_density 
-    for a in atm][:], hmsis/1e3)
-lines!([a.N2_number_density 
-    for a in atm][:], hmsis/1e3)
+fig, ax, l = lines([a.N2_number_density 
+    for a in atm][:], hmsis/1e3, label = "N₂",
+    axis = (xscale = log10,
+        xlabel = "Density [m⁻³]",
+        ylabel = "Height [km]",
+        ),
+    )
 lines!([a.O2_number_density 
-    for a in atm][:], hmsis/1e3)
+    for a in atm][:], hmsis/1e3, label = "O₂")
 lines!([a.O_number_density 
-    for a in atm][:], hmsis/1e3)
+    for a in atm][:], hmsis/1e3, label = "O")
+lines!([a.H_number_density 
+    for a in atm][:], hmsis/1e3, label = "H")
+lines!([a.He_number_density 
+    for a in atm][:], hmsis/1e3, label = "He")
+axislegend(ax)
 display(fig)
+save("figures/atmosphere.png", fig, px_per_unit = 3.3)
 """

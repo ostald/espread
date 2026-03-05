@@ -310,3 +310,175 @@ function convert_phase_fcn_to_3D(phase_fcn, lim_theta)
     return phase_fcn
 end
 
+
+"""
+
+theta = range(0, pi, 180)
+Energy = logrange(1e0, 1e4, 500)
+
+pN2 = phase_fcn_N2(theta, Energy)
+pO2 = phase_fcn_O2(theta, Energy)
+pO  = phase_fcn_O(theta, Energy)
+
+fig, ax, hm = heatmap(Energy, theta, pN2[1]',
+    colorscale = log10,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "N2 elastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+fig
+
+
+fig, ax, hm = heatmap(Energy, theta, pN2[2]',
+    colorscale = log10,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "N2 inelastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+fig
+
+
+fig, ax, hm = heatmap(Energy, theta, pO2[1]',
+    colorscale = log10,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O2 elastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+fig
+
+
+fig, ax, hm = heatmap(Energy, theta, pO2[2]',
+    colorscale = log10,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O2 inelastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+fig
+
+
+fig, ax, hm = heatmap(Energy, theta, (pO[1] ./ sum(pO[1], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O elastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+
+
+fig, ax, hm = heatmap(Energy, theta, pO[2]',
+    colorscale = log10,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O inelastic"
+        ),
+    )
+Colorbar(fig[1, 2], hm, label = "PDF [1]")
+fig
+
+
+##
+
+fig, ax, hm = heatmap(Energy, theta, (pN2[1] ./ sum(pN2[1], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        #xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "N₂ elastic",
+        xtickformat = "",
+        ),
+    figure=(size = (700, 800),),
+    )
+sleep(2)
+Colorbar(fig[1, 2], hm, #label = "PDF [1]"
+    )
+
+heatmap(fig[1, 3], Energy, theta, (pN2[2] ./ sum(pN2[2], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        #xlabel = "Energy [eV]",
+        #ylabel = "Angle [rad]",
+        title = "N₂ inelastic",
+        xtickformat = "",
+        ),
+    )
+sleep(2)
+Colorbar(fig[1, 4], hm, label = "PDF [1]")
+
+
+heatmap(fig[2, 1], Energy, theta, (pO2[1] ./ sum(pO2[1], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        #xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O₂ elastic",
+        xtickformat = "",
+        ),
+    )
+sleep(2)
+Colorbar(fig[2, 2], hm, #label = "PDF [1]"
+    )
+
+heatmap(fig[2, 3], Energy, theta, (pO2[2] ./ sum(pO2[2], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        #xlabel = "Energy [eV]",
+        #ylabel = "Angle [rad]",
+        title = "O₂ inelastic",
+        xtickformat = "",
+        ),
+    )
+sleep(2)
+Colorbar(fig[2, 4], hm, label = "PDF [1]")
+
+
+heatmap(fig[3, 1], Energy, theta, (pO[1] ./ sum(pO[1], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        ylabel = "Angle [rad]",
+        title = "O elastic",
+        #xtickformat = "",
+        ),
+    )
+sleep(2)
+Colorbar(fig[3, 2], hm, #label = "PDF [1]"
+    )
+
+heatmap(fig[3, 3], Energy, theta, (pO[2] ./ sum(pO[2], dims = 1))',
+    colorscale = log10,
+    colormap = :batlow,
+    axis = (xscale = log10,
+        xlabel = "Energy [eV]",
+        #ylabel = "Angle [rad]",
+        title = "O inelastic",
+        #xtickformat = "",
+        ),
+    )
+sleep(2)
+Colorbar(fig[3, 4], hm, label = "PDF [1]")
+
+fig
+save("figures/phase_functions.png", fig, px_per_unit = 3.3)
+
+"""
