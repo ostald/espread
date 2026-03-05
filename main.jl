@@ -32,7 +32,7 @@ for batch in 1:nbatches
                     res_dir, 
                     b_model, 
                     nPerGyro; 
-                    batch=batch;
+                    batch=batch,
                     pitch_angle_distribution = pitch_angle_distribution)
                 print("E0 = ", E0, "\npitch_lim_deg = ", pitch_lim_deg, "\nbatch = ", batch, "\n\n")
             #global i_proc = i_proc+1
@@ -64,10 +64,10 @@ lim_pitch_deg = pitch_limits_deg[1]
 #rmprocs(Distributed.workers(), waitfor = 1)
 
 """
-#for i in workers()
-#    w = Distributed.worker_from_id(i)
-#    kill(w.config.process, Base.SIGKILL)
-#end
+for i in workers()
+    w = Distributed.worker_from_id(i)
+    kill(w.config.process, Base.SIGKILL)
+end
 """
 
 # check on silent failure:

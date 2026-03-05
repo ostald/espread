@@ -318,7 +318,7 @@ end
 
 
 
-function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0; pitch_angle_distribution = "isotropic_below")
+function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_dir, b_model, nPerGyro; batch=0, pitch_angle_distribution = "isotropic_below")
 
     Bin!(B, p) = 0
     if b_model == "dipole"
