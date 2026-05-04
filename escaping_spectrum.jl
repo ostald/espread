@@ -71,6 +71,8 @@ E_edges = 2 .^ 2 .^collect(0:1/128:log2(log2(8000*1.5))) / 2545.4561526280904 * 
 
 ##
 WGLMakie.activate!()
+using CairoMakie
+CairoMakie.activate!()
 f_esc_E_all = Figure()
 sleep(1)
 ax_esc = Axis(f_esc_E_all[1, 1], 

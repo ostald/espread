@@ -17,6 +17,8 @@ CairoMakie.activate!()
 WGLMakie.activate!()
 
 include("analysis_util.jl")
+include("constants.jl")
+include("magnetic_field.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
@@ -426,13 +428,16 @@ p = nothing
 to_evaluate = runs_hrp_90[1:2:end]
 
 sleep(1)
+
+lim_pitch_deg = "-1"
+
 for (i2, r) in enumerate(to_evaluate)
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
     close(io)
 
-    Label(f[0, i2], "$E0 keV", tellwidth = false)
+    Label(f[0, i2], "$(E0/1000) keV", tellwidth = false)
 
 
     new_edges = (his_hrp.edges[1], his_hrp.edges[2][1:10:end], his_hrp.edges[3])
@@ -869,14 +874,19 @@ display(f_prod_r_h)
 
 
 ##
-#CairoMakie.activate!()
-fig = Figure()
+CairoMakie.activate!()
+fig = Figure(size = (800, 450))
 sleep(1)
+xticklabels = [rich(value, superscript("1/2")) for value in ["0", "0.5", "2", "4", "8", "16", "32"]]
+xticklabels[1] = rich("0")
 ax = Axis(fig[1, 1],
-    limits = (sqrt.((3e2, 35e3)./1e3), (-0.8, 31)),
-    xticks = sqrt.([5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3),
+    #limits = (sqrt.((3e2*0, 35e3)./1e3), (-0.8, 31)),
+    limits = ((-0.2, sqrt(35e3/1e3)), (-0.8, 31)),
+    xticks = sqrt.([0, 5e2, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3),
     #ax.title = L"\mathbf{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}"
-    xtickformat = values -> [rich(value, superscript("1/2")) for value in ["0.5", "1", "2", "4", "8", "16", "32"]], 
+    xtickformat = values -> xticklabels, 
+    xminorticks = [1],
+    xminorticksvisible = true, xminorgridvisible = true,
     #xscale = log10,
     xlabel = rich("(Energy [keV])", superscript("1/2")),
     yticks = 0:5:30,
@@ -941,15 +951,49 @@ deltaw = abs(deltad_max / dddr)
         end
     end
 end
-scatterlines!(ax, sqrt.([5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3), 2 .* width_20, color = Makie.wong_colors()[1],label = L"{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}")
-errorbars!(ax, sqrt.([5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3), 2 .* width_20, err_width_20, color = Makie.wong_colors()[1])
-scatterlines!(ax, sqrt.([5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3), 2 .* width_90, color = Makie.wong_colors()[2],label = "isotropic")
-errorbars!(ax, sqrt.([5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]./1e3), 2 .* width_90, err_width_90, color = Makie.wong_colors()[2])
+
+e_array = [5e2, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]
+v_arr = v_abs.(e_array)
+B_top = convergent_vertical_field([0, 0, 600e3+c.re])
+
+rg_array = c.me *v_arr / (c.qe * norm(B_top))
+
+scatterlines!(ax, sqrt.(e_array./1e3), 2 .* width_20, color = Makie.wong_colors()[1],label = L"{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}")
+errorbars!(ax, sqrt.(e_array./1e3), 2 .* width_20, err_width_20, color = Makie.wong_colors()[1])
+scatterlines!(ax, sqrt.(e_array./1e3), 2 .* width_90, color = Makie.wong_colors()[2],label = "isotropic")
+errorbars!(ax, sqrt.(e_array./1e3), 2 .* width_90, err_width_90, color = Makie.wong_colors()[2])
 scatter!(ax, sqrt.([5, 25]), [9.5, 22.4], color = Makie.wong_colors()[3],label = "Borovsky 1991", marker = :star5)
+
+
 axislegend(ax, position = :lt)
-#display(fig)
+display(fig)
+#save(joinpath(dir, "plots", "width_h_int.png"), fig, px_per_unit = 3.3)
+
+
+
+#fig = Figure()
+ax = Axis(fig[1, 2], 
+    limits = ((-0.4, 13.5), (-0.1, nothing)),
+    xticks = range(0, 14, step=2),
+    #ax.title = L"\mathbf{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}"
+    #xtickformat = values -> [rich(value, superscript("1/2")) for value in ["0.5", "1", "2", "4", "8", "16", "32"]], 
+    #xscale = log10,
+    xlabel = "Gyroradius [m]",
+    #yticks = 0:5:30,
+    ylabel = "Spreading Factor [1]",
+    )
+scatterlines!(ax, rg_array, 2 .* width_20 ./ rg_array ./sin(20/180*pi), color = Makie.wong_colors()[1],label = L"{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}")
+errorbars!(ax, rg_array, 2 .* width_20./ rg_array./sin(20/180*pi), err_width_20./ rg_array./sin(20/180*pi), color = Makie.wong_colors()[1])
+scatterlines!(ax, rg_array, 2 .* width_90./ rg_array, color = Makie.wong_colors()[2],label = "isotropic")
+errorbars!(ax, rg_array, 2 .* width_90./ rg_array, err_width_90./ rg_array, color = Makie.wong_colors()[2])
+display(fig)
 save(joinpath(dir, "plots", "width_h_int.png"), fig, px_per_unit = 3.3)
 
+
+
+
+
+##
 using LsqFit
 
 function linear(x, a)

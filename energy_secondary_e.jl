@@ -83,12 +83,13 @@ lines!(E_secondary, pdf_discrete*nsample*dEs)
 display(current_figure())
 """
 
-"""
+
 # to produce cdf, use fine a fine resolution when evaluating the pdf,
 # use cumsum for simlpe quadrature integration,
 # producing a discrete cdf at points Es_lim
 # use cdf_discrete to randomly choose E_secondary with resolution dEs
-pdf, E_max = E_secondary_e_O2(50, 12.8)
+Ep = 100 
+pdf, E_max = E_secondary_e_O2(Ep, 12.8)
 dEs = 0.1
 Es_lim =  0:dEs:E_max+dEs
 E_secondary = Es_lim[1:end-1] .+ dEs/2 #evaluate cdf in teh middle of a bin
@@ -103,7 +104,18 @@ pdf_discrete = pdf(E_secondary)
 cdf_discrete = cumsum(pdf_discrete) 
 cdf_discrete = cdf_discrete ./ cdf_discrete[end] #cdf must start from 0
 
-lines(E_secondary, pdf_discrete)
+fig, ax, lin = lines(E_secondary, pdf_discrete, 
+    axis = (xlabel = "Secondary Electron Energy [eV]",
+        ylabel = "PDF [1]",
+        ),
+    label = "Primary electron energy: $Ep eV\n"*
+        "Ionization Energy: 12.8 eV\n"*
+        "Scattering with O₂",
+    )
+axislegend(ax)
+display(fig)
+save("figures/pdf_secondary_e.png", fig, px_per_unit = 3.3)
+
 scatter!(Es_lim[2:end], cdf_discrete)
 
 nsample = Int(1e6)

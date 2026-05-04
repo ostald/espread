@@ -64,10 +64,10 @@ lim_pitch_deg = pitch_limits_deg[1]
 #rmprocs(Distributed.workers(), waitfor = 1)
 
 """
-for i in workers()
-    w = Distributed.worker_from_id(i)
-    kill(w.config.process, Base.SIGKILL)
-end
+#for i in workers()
+#    w = Distributed.worker_from_id(i)
+#    kill(w.config.process, Base.SIGKILL)
+#end
 """
 
 # check on silent failure:

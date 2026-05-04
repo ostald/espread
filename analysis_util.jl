@@ -49,6 +49,11 @@ function phase_angle(p)
 end
 
 
+function pitch_angle(p)
+    return atan(sqrt(sum(p[1:2] .^2)), -p[3])
+end
+
+
 
 function rebin(h, new_edges)
     #1. make sure we have bare counts as weightshis
