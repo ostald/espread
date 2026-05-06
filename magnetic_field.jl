@@ -11,10 +11,12 @@ k0 = 8e15 Tm3
 """
 
 function make_convergent_vertical_field_demo(c)
-    z0 = (c.re + 80e3) #z0 at 80km above earth radius
     c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7; m - magnetic dipole moment 8.22e22
-    dBdz = -6*c1 / z0^4                                #factor 2e3
+    #z0 = (c.re + 80e3) #z0 at 80km above earth radius
+    #dBdz = -6*c1 / z0^4                                
     function convergent_vertical_field!(B, p)
+        z0 = p[3]
+        dBdz = -6*c1 / z0^4                                
         B[1] = 1/2 * p[1] * dBdz
         B[2] = 1/2 * p[2] * dBdz
         B[3] = -c1*2 / p[3]^3 
@@ -22,6 +24,8 @@ function make_convergent_vertical_field_demo(c)
     end
 
     function convergent_vertical_field(p)
+        z0 = p[3]
+        dBdz = -6*c1 / z0^4 
         B = [1/2 * p[1] * dBdz, 
              1/2 * p[2] * dBdz,
              -c1*2 / p[3]^3 ]
@@ -56,10 +60,12 @@ save("figures/conicB.png", fig)
 """
 
 function make_convergent_vertical_field(c)
-    z0 = (c.re + 80e3) #z0 at 80km above earth radius
     c1 = 8.22e15 #Tm3      c1 = mu_0 m / 4 pi ≈ m * 1e-7
-    dBdz = -6*c1 / z0^4
+#    z0 = (c.re + 80e3) #z0 at 80km above earth radius
+#    dBdz = -6*c1 / z0^4
     function convergent_vertical_field!(B, p)
+        z0 = p[3]
+        dBdz = -6*c1 / z0^4 
         B[1] = 1/2 * p[1] * dBdz
         B[2] = 1/2 * p[2] * dBdz
         B[3] = -c1*2 / p[3]^3 
