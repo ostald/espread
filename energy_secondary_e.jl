@@ -81,7 +81,7 @@ hist([sample_secondary(pdf, E_max) for _ in 1:nsample],
     )
 lines!(E_secondary, pdf_discrete*nsample*dEs)
 display(current_figure())
-"""
+
 
 
 # to produce cdf, use fine a fine resolution when evaluating the pdf,
@@ -104,11 +104,12 @@ pdf_discrete = pdf(E_secondary)
 cdf_discrete = cumsum(pdf_discrete) 
 cdf_discrete = cdf_discrete ./ cdf_discrete[end] #cdf must start from 0
 
+
 fig, ax, lin = lines(E_secondary, pdf_discrete, 
     axis = (xlabel = "Secondary Electron Energy [eV]",
         ylabel = "PDF [1]",
         ),
-    label = "Primary electron energy: $Ep eV\n"*
+    label = "Primary electron energy: Ep eV\n"*
         "Ionization Energy: 12.8 eV\n"*
         "Scattering with O₂",
     )
