@@ -24,7 +24,7 @@ alt0 = 600e3 #m
 #Bin! = convergent_vertical_field!
 
 pitch_limits_deg = [20, 90]
-pitch_limits_deg = 61:1:79
+pitch_limits_deg = 61:1:67
 #pitch_limits_deg = [60]
 
 nPerGyro = 20
@@ -41,10 +41,10 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "r12_pitchAngle_"
+name = "r13_pitchAngle_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 50
+nprocesses = 250
 
 nbatches = 10
 pitch_angle_distribution = "single_angle"

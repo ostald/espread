@@ -14,7 +14,7 @@ Bonito.set_cleanup_time!(1)
 using WGLMakie
 using CairoMakie
 CairoMakie.activate!()
-WGLMakie.activate!()
+#WGLMakie.activate!()
 
 include("analysis_util.jl")
 
@@ -55,7 +55,7 @@ io = open(joinpath(dir, r), "r")
 
 
 ##
-r = runs[3]
+r = runs[2]
 println(r)
 io = open(joinpath(dir, "hist_pitch_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_pitch, ne_pitch_summed = deserialize(io)
@@ -87,16 +87,16 @@ fig
 xlims!(0, 90)
 
 id = 67
-fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, label = "$(rad2deg(pitch_middle[id]))",
+fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id]))) - $(round(rad2deg(pitch_edges[id+1])))",
     axis = (xscale = log10, limits = ((1e-5, 1e0), nothing)),)
-lines!(ax, his_pitch.weights[:, id-1], z_middle./1e3, label = "$(rad2deg(pitch_middle[id-1]))",)
+lines!(ax, his_pitch.weights[:, id-1], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id-1]))) - $(round(rad2deg(pitch_edges[id])))")
 axislegend(ax)
 fig
 
 fig = Figure()
 ax = Axis(fig[1, 1], xscale = log10, limits = ((1e-4, 1e2), nothing))
 for id in 60:70
-    lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(rad2deg(pitch_middle[id]))",)
+    lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id]))) - $(round(rad2deg(pitch_edges[id+1])))",)
 end
 axislegend(ax)
 fig
@@ -104,9 +104,9 @@ fig
 
 id = 68
 data = dropdims(sum(his_pitch.weights[:, id:end], dims = 2), dims = 2)
-fig, ax, lin = lines(data, z_middle./1e3, label = "Sum to $(rad2deg(pitch_middle[id]))",
+fig, ax, lin = lines(data, z_middle./1e3, label = "Sum to $(rad2deg(pitch_edges[id]))",
     axis = (xscale = log10, limits = ((1e-5, 1e1), nothing)),)
-lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(rad2deg(pitch_middle[id]))",)
+lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(rad2deg(pitch_edges[id]))",)
 axislegend(ax)
 fig
 
@@ -115,6 +115,22 @@ fig
 
 
 ##
+
+dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
+dir_con = readdir(joinpath(dir, "hist_summed"))
+
+dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
+runs = unique(dir_con_raw)
+
+runs_xyz = filter(x-> contains(x, "xyz"), runs)
+runs_hrp = filter(x-> contains(x, "hrp"), runs)
+
+runs_xyz_4kev = filter(x-> contains(x, "4000.0eV"), runs_xyz)
+runs_xyz_10kev = filter(x-> contains(x, "10000.0eV"), runs_xyz)
+runs_xyz_40kev = filter(x-> contains(x, "40000.0eV"), runs_xyz)
+
+E0 = 0
+
 f = Figure()
 sleep(1)
 ax = Axis(f[1, 1], 
@@ -141,6 +157,7 @@ axislegend(ax)
 xlims!(1e-5, 1e0)
 ylims!(80, 400)
 f
+save(joinpath(dir, "plots", "production_profile_pitch_angle_scan_$(E0)eV.png"), f, px_per_unit = 3.3)
 ##
 
 
@@ -179,5 +196,6 @@ lines!(ax, data/1e6, h_middle/1e3, label = "MC $E0 eV, $lim_pitch_deg")
 #lines(data/1e6, h_middle/1e3, label = "MC $E0 eV", axis = (xscale = log10,),)
 axislegend(ax)
 ylims!(80, 400)
+xlims!(1e-5, 1e0)
 f
-
+save(joinpath(dir, "plots", "production_profile_pitch_angle_$lim_pitch_deg.png"), f, px_per_unit = 3.3)

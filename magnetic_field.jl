@@ -73,6 +73,8 @@ function make_convergent_vertical_field(c)
     end
 
     function convergent_vertical_field(p)
+        z0 = p[3]
+        dBdz = -6*c1 / z0^4 
         B = [1/2 * p[1] * dBdz, 
              1/2 * p[2] * dBdz,
              -c1*2 / p[3]^3 ]
