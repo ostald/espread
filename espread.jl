@@ -58,7 +58,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     elseif pitch_angle_distribution == "single_angle"
         pitch = lim_pitch #for pitchAngle run
     end
-    print("pitch angle: ", pitch)
+    println("pitch angle: ", pitch)
     phase = rand()*2*pi
 
     """

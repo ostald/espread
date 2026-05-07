@@ -11,10 +11,10 @@ using Bonito
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
 
-using WGLMakie
+#using WGLMakie
 using CairoMakie
 CairoMakie.activate!()
-WGLMakie.activate!()
+#WGLMakie.activate!()
 
 include("analysis_util.jl")
 include("constants.jl")
@@ -22,6 +22,7 @@ include("magnetic_field.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
+dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
@@ -235,6 +236,7 @@ f
 
 ##
 r = "h_xyz_4000.0eV_90.0deg_summed.hist"
+r = "h_hrp_4000.0eV_63.0deg_summed.hist"
 io = open(joinpath(dir, "hist_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
 close(io)
@@ -275,7 +277,8 @@ ax = Axis(f[1, 1],
         xscale = log10,
         title = "Production vs Height 20 deg"
         )
-for r in runs_xyz_20
+#for r in runs_xyz_20
+for r in runs_xyz
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)

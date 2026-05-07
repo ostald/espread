@@ -11,7 +11,7 @@ using Bonito
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
 
-using WGLMakie
+#using WGLMakie
 using CairoMakie
 CairoMakie.activate!()
 #WGLMakie.activate!()
@@ -22,8 +22,9 @@ dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
 #dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
 dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
-dir_con = readdir(joinpath(dir, "hist_pitch_summed"))
+#dir_con = readdir(joinpath(dir, "hist_pitch_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
 
@@ -57,7 +58,7 @@ io = open(joinpath(dir, r), "r")
 ##
 r = runs[2]
 println(r)
-io = open(joinpath(dir, "hist_pitch_summed", r), "r")
+io = open(joinpath(dir, "hist_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_pitch, ne_pitch_summed = deserialize(io)
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_pitch = deserialize(io)
 close(io)
@@ -104,11 +105,13 @@ fig
 
 id = 68
 data = dropdims(sum(his_pitch.weights[:, id:end], dims = 2), dims = 2)
-fig, ax, lin = lines(data, z_middle./1e3, label = "Sum to $(rad2deg(pitch_edges[id]))",
+fig, ax, lin = lines(data, z_middle./1e3, label = "Sum $(rad2deg(pitch_edges[id])) deg to 90 deg",
     axis = (xscale = log10, limits = ((1e-5, 1e1), nothing)),)
-lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(rad2deg(pitch_edges[id]))",)
+lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id]))) deg - $(round(rad2deg(pitch_edges[id+1]))) deg",)
 axislegend(ax)
+xlims!(1e-4, 1e0)
 fig
+save(joinpath(dir, "plots", "production_profile_sum90.png"), fig, px_per_unit = 3.3)
 
 
 
@@ -141,7 +144,8 @@ ax = Axis(f[1, 1],
         #xticks = LogTicks(-4:-2),
         #title = "Production vs Height isotropic"
         )
-for r in runs_xyz_40kev[1:5]
+#for r in runs_xyz_40kev[1:5]
+for r in runs_xyz
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
@@ -173,8 +177,10 @@ ax = Axis(f[1, 1],
         #title = "Production vs Height isotropic"
         )
 r =  "h_hrp_10000.0eV_$draw_plim.0deg_summed.hist"
+r =  "h_pitch_4000.0eV_$draw_plim.0deg_summed.hist"
 println(r)
 io = open(joinpath(dir, "hist_summed", r), "r")
+io = open(joinpath(dir, "hist_pitch_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
 close(io)
 

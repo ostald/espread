@@ -11,6 +11,7 @@ dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
 #dir = "results/r11_conicB_32keV_2026-02-04T14:41:43.343/"
 #dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
+dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -18,7 +19,7 @@ if !isdir(joinpath(dir, "hist"))
     mkdir(joinpath(dir, "hist"))
 end
 
-#for file in dir_con_raw
+for file in dir_con_raw
 #    file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
@@ -90,6 +91,50 @@ end
     end
 
 end
+
+
+if !isdir(joinpath(dir, "hist_summed"))
+    mkdir(joinpath(dir, "hist_summed"))
+end
+dir_con = readdir(joinpath(dir, "hist"))
+runs = unique([d[1:end-10] for d in dir_con])
+#radial_runs = filter(x-> contains(x, "hrp"), runs)
+#cartesian_runs = filter(x-> contains(x, "xyz"), runs)
+
+for r in runs
+    list_h_run = filter(x-> contains(x, r), dir_con)
+    println("Summing histograms for run: ", r)
+    #sum all histograms
+    his_summed = nothing
+    ne_pitch_summed = nothing
+    E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = 0, 0, 0, 0, 0, 0
+    for file in list_h_run
+        println("Processing histogram file: ", file)
+        io = open(joinpath(dir, "hist", file), "r")
+        E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_i = deserialize(io)
+        close(io)
+
+        if his_summed === nothing
+            his_summed = his_i
+            #ne_pitch_summed = ne_pitch.weights
+        else
+            his_summed.edges == his_i.edges || error("Histogram edges do not match!")
+            his_summed.weights .+= his_i.weights
+            #ne_pitch_summed .+= ne_pitch.weights
+        end
+    end
+
+    open(joinpath(dir, "hist_summed", r * "_summed.hist"), "w") do io
+        serialize(io, [E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_summed])
+    end
+end
+
+
+##
+# pitch angle from general runs
+# (introducing pitch angle histogram based on pitch angle of primary)
+# not to be used for delta pitch angle distribution, as making a histogram in pitch angle makes no sense in that case
+# use above routine for that
 
 
 
