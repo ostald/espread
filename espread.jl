@@ -218,7 +218,7 @@ function propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPer
         elseif status == 0
             error("Boris mover failed. Investigate!")
         else 
-            pritnln("status :", status)
+            println("status :", status)
             error("This should not happen. Investigate!")
         end
         

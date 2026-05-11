@@ -7,6 +7,7 @@ function ode_boris_mover_mfp(n_mfp, r0, v0, q, m, Bin!, sigma, densityf; trace =
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
   #           2=particle is outgoing and above max_altitude
+  #           3=particle has reached earths surface
   #           -1 = undef
   #   r: particle position
   #   v: particle velocity

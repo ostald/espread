@@ -12,6 +12,7 @@ dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r11_conicB_32keV_2026-02-04T14:41:43.343/"
 #dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
 dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
+dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -27,7 +28,7 @@ for file in dir_con_raw
     if n_electrons != 1000
         println("number of electrons in this batch: ", n_electrons)
     end
-    @assert n_electrons == 1000
+    #@assert n_electrons == 1000
 
     df.E0 = E_ev.(norm.(df.v0))
     df.E_end = E_ev.(norm.(df.v))

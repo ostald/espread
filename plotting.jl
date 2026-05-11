@@ -23,6 +23,7 @@ include("magnetic_field.jl")
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
 dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
+dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
@@ -278,7 +279,7 @@ ax = Axis(f[1, 1],
         title = "Production vs Height 20 deg"
         )
 #for r in runs_xyz_20
-for r in runs_xyz
+for r in filter(x -> contains(x, "4000.0"), runs_xyz)[5:5]
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
@@ -286,7 +287,7 @@ for r in runs_xyz
 
     new_edges = (his_xyz.edges[1], his_xyz.edges[2], filter(x -> mod(x, 1000) == 0, his_xyz.edges[3]))
 
-    his_xyz = rebin(his_xyz, new_edges);
+    #his_xyz = rebin(his_xyz, new_edges);
     his_xyz = normalize(his_xyz, mode=:density)
     # normalise by density is the same as dividing by bin volume
     # check:
@@ -300,8 +301,14 @@ for r in runs_xyz
     lines!(ax, data, z_middle/1e3, label = "$E0 eV")
 end
 axislegend(ax)
-save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3.3)
+#save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3.3)
 f
+
+include("constants.jl")
+p_angles = 65:1:75
+r0 = 600e3 + c.re
+r1 = ((sin.(deg2rad.(p_angles)) .^2 * r0^3) .^(1/3) .- c.re) ./1e3
+
 
 ##
 
