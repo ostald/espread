@@ -6,3 +6,7 @@ function save_commit_hash(res_dir)
         println(io,"current_commit=",current_commit)
     end
 end
+
+function auto_commit(resdir, commit_message)
+    run(`git add -u`)
+    current_commit = read(`git commit -m "auto_commit: " + commit_message`)

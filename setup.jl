@@ -48,7 +48,7 @@ loc_geod = loc_geod_deg ./ 180 * pi
 name = "r16_reevaluate-correctedMagField_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 3
+nprocesses = 100
 
 
 
