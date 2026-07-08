@@ -7,8 +7,10 @@ function save_commit_hash(res_dir)
     end
 end
 
-function auto_commit(resdir, commit_message)
+function auto_commit(res_dir, commit_message)
     run(`git add -u`)
     commit_string = "auto_commit: " * commit_message
     current_commit = read(`git commit -m $commit_string`, String)
-    return current_commit
+    #return current_commit
+    print(current_commit)
+end

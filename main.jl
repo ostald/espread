@@ -2,6 +2,9 @@ include("espread.jl")
 include("util.jl")
 include("setup.jl")
 mkdir(res_dir)
+
+#automatically commit and save hash in result folder
+auto_commit(res_dir, "save before run. " * res_dir)
 save_commit_hash(res_dir)
 
 

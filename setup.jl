@@ -9,7 +9,6 @@ b_model = "vertical"
 # Define initial energy
 #E0 = 1e4 #eV
 e_energy = [500, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]
-e_energy = [500]#, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]
 #e_energy = [4e3, 10e3]
 
 # Define number of particles in one batch
