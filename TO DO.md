@@ -50,7 +50,7 @@ Discussions with Tima (Mai 2026)
 verification methods:
 - mirroring altitude
 - compare backscattered energy with Reimei satellite or vision rocket (if difference is less than factor 2, very good)
-- compare with timas proiles (see email)
+- compare with timas profiles (see email)
 - compare vertical, non-converging magnetic field with dipole field for istropic flux
     => difference shoudl be around factor of 1.3-1.4
 
