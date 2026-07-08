@@ -9,4 +9,6 @@ end
 
 function auto_commit(resdir, commit_message)
     run(`git add -u`)
-    current_commit = read(`git commit -m "auto_commit: " + commit_message`)
+    commit_string = "auto_commit: " * commit_message
+    current_commit = read(`git commit -m $commit_string`, String)
+    return current_commit
