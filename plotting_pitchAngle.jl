@@ -23,6 +23,7 @@ dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
 dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
+dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 #dir_con = readdir(joinpath(dir, "hist_pitch_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
@@ -101,6 +102,7 @@ for id in 60:70
 end
 axislegend(ax)
 fig
+
 
 
 id = 68

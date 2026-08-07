@@ -24,6 +24,12 @@ dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
 dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
 dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
+dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
+
+if !isdir(joinpath(dir, "plots"))
+    mkdir(joinpath(dir, "plots"))
+end
+
 dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
@@ -75,17 +81,22 @@ df = CSV.read("/nfs/revontuli/data/oliver/espread/results/r4_conicB_2025-09-05T1
             types=Float64,
             ignorerepeated=true)
 rename!(df, :Column1 => :height, :Column2 => :nN2, :Column3 => :nO2, :Column4 => :nO)
-fig, ax, lin = lines(log10.(df.nN2), df.height)
-lines!(ax, log10.(df.nO2), df.height)
-lines!(ax, log10.(df.nO), df.height)
+fig, ax, lin = lines(log10.(df.nN2), df.height, label = "N2 Aurora")
+lines!(ax, log10.(df.nO2), df.height, label = "O2 Aurora")
+lines!(ax, log10.(df.nO), df.height, label = "O Aurora")
 include("get_msis.jl")
+hmin = 80e3
+hmax = 600e3
+hintervals = 1e3
 z = hmin+hintervals/2:hintervals:600e3
 densityf = make_densityf(hmin+hintervals/2, hmax, hintervals, [69.58, 19.23])
 atm = stack(densityf.(z))'
-lines!(ax, log10.(atm[:, 1]), z ./1e3)
-lines!(ax, log10.(atm[:, 2]), z ./1e3)
-lines!(ax, log10.(atm[:, 3]), z ./1e3)
-lines!(ax, log10.(atm[:, 4]), z ./1e3)
+lines!(ax, log10.(atm[:, 1]), z ./1e3, label = "N2 julia_msis", linestyle = :dash)
+lines!(ax, log10.(atm[:, 2]), z ./1e3, label = "O2 julia_msis", linestyle = :dash)
+lines!(ax, log10.(atm[:, 3]), z ./1e3, label = "O julia_msis", linestyle = :dash)
+lines!(ax, log10.(atm[:, 4]), z ./1e3, label = "He julia_msis", linestyle = :dash)
+axislegend()
+fig
 using DelimitedFiles
 writedlm( "atmosphere_julia.csv",  atm, ',')
 ##
@@ -125,7 +136,7 @@ axs = [Axis(f[i, 1],
         #title = "Production vs Height 20 deg"
         ) for i in 1:5]
 linkxaxes!(axs)
-for (i,r) in enumerate(runs_xyz_90)
+for (i,r) in enumerate(runs_xyz_90[1:5])
     #if occursin("500",r) continue end
     #if occursin("1000",r) continue end
     #if occursin("2000",r) continue end
@@ -237,7 +248,7 @@ f
 
 ##
 r = "h_xyz_4000.0eV_90.0deg_summed.hist"
-r = "h_hrp_4000.0eV_63.0deg_summed.hist"
+#r = "h_hrp_4000.0eV_63.0deg_summed.hist"
 io = open(joinpath(dir, "hist_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
 close(io)
@@ -279,7 +290,7 @@ ax = Axis(f[1, 1],
         title = "Production vs Height 20 deg"
         )
 #for r in runs_xyz_20
-for r in filter(x -> contains(x, "4000.0"), runs_xyz)[5:5]
+for r in filter(x -> contains(x, "4000.0"), runs_xyz)[2:2]
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
@@ -323,7 +334,7 @@ ax = Axis(f[1, 1],
         )
 for r in runs_xyz_90
     println(r)
-    dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+    #dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
     close(io)
@@ -364,7 +375,7 @@ close(io)
 for (i, r) in enumerate(runs_xyz)
     if mod(ceil(i/2), 2) == 0 continue end
     println(r)
-    dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+    #dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
     close(io)

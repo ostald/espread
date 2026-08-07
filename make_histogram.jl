@@ -13,6 +13,7 @@ dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
 dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
 dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
+dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -80,7 +81,8 @@ for file in dir_con_raw
 
     x_edges = collect(-20.5:0.1:20.5)
     y_edges = copy(x_edges)
-    z_edges = collect(80e3:1e3:600e3)
+    z_edges = collect(80e3:1e3:600e3) 
+    #intervalls of 1km bc of resolution of atmosphere? => can maybe be updated now. or maybe due to size of histogram?
 
     x_middle = x_edges[1:end-1] + diff(x_edges)/2
     y_middle = y_edges[1:end-1] + diff(y_edges)/2
@@ -133,9 +135,9 @@ end
 
 ##
 # pitch angle from general runs
-# (introducing pitch angle histogram based on pitch angle of primary)
+# (introducing pitch angle histogram based on pitch angle of primary electron)
 # not to be used for delta pitch angle distribution, as making a histogram in pitch angle makes no sense in that case
-# use above routine for that
+# use above routine for that delta pitch angle distribution
 
 
 
