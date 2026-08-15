@@ -1,15 +1,18 @@
-using WGLMakie
+#using WGLMakie
+using CairoMakie
 #using DataFrames
 include("analysis_util.jl")
 include("constants.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
+#dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
 runs = unique([d[1:end-8] for d in dir_con_raw])
 
+# static plot
+if false
 #for r in runs[9:end]
     #println("Processing run: ", r)
     #filter_crit = r
@@ -62,7 +65,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         #else
         #    error("unknown field model")
         #end
-    end
+    #end
 
     fig, ax, h = hist(df_ion.pos)
 
@@ -127,12 +130,27 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_pitchAngle.png"), fig)
 
 #end
+end
 
 
-for r in runs[9:end]
+#rotating plot
+using Distributed
+prcs = addprocs(10, env=["JULIA_WORKER_TIMEOUT" => "500"])
+
+@everywhere using CairoMakie
+@everywhere include("analysis_util.jl")
+@everywhere include("constants.jl")
+@everywhere dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+@everywhere dir_con = readdir(dir)
+@everywhere dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
+
+runs = unique([d[1:end-8] for d in dir_con_raw])
+
+# static plot
+@distributed for r in runs
+    #r = runs[8]
     println("Processing run: ", r)
     filter_crit = r
-    #filter_crit = runs[8]
 
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
     #files = files[1:2]
@@ -198,14 +216,16 @@ for r in runs[9:end]
         ylabel = "y [m]",
         zlabel = "z [km]",
         )
+    display(fig)
     #sleep(2)
+    """
     sc = scatter!(ax,Point3.(df_primary_injection.pos),
         markersize = markersize*2, alpha = alpha*2, transparency = true, 
         label = "Injected Primary" => (; markersize = 15, alpha = 1))#,
     sc = scatter!(ax,Point3.(df_escaping.pos),
         markersize = markersize*2, alpha = alpha*2, transparency = true, 
         label = "escaping" => (; markersize = 15, alpha = 1))#,
-    
+    """
     sc = scatter!(ax,Point3.(df_ion.pos), 
         markersize = markersize, alpha = alpha, transparency = true, 
         label = "Ionizations" => (; markersize = 15, alpha = 1))#,
@@ -215,7 +235,8 @@ for r in runs[9:end]
     ylims!(ax, -30, 30)
     xlims!(ax, -30, 30)
     sleep(2)
-    axislegend() 
+    display(fig)
+    #axislegend() 
    
     save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_v2.png"), fig)
 

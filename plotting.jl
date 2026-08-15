@@ -12,9 +12,9 @@ Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
 
 #using WGLMakie
+#WGLMakie.activate!()
 using CairoMakie
 CairoMakie.activate!()
-#WGLMakie.activate!()
 
 include("analysis_util.jl")
 include("constants.jl")
@@ -315,6 +315,9 @@ axislegend(ax)
 #save(joinpath(dir, "plots", "hist_height_xyz_20deg_allE.png"), f, px_per_unit = 3.3)
 f
 
+
+##
+# check mirror altitudes!!!
 include("constants.jl")
 p_angles = 65:1:75
 r0 = 600e3 + c.re
@@ -358,7 +361,7 @@ using MathTeXEngine
 set_texfont_family!(FontFamily("TeXGyreHeros"))
 CairoMakie.activate!()
 f = Figure()
-sleep(1)
+sleep(2)
 ax = Axis(f[1, 1], 
         xlabel = "Production [m⁻³]",
         ylabel = "Height [km]",
@@ -509,13 +512,13 @@ display(f)
 ##
 #WGLMakie.activate!()
 
-#using CairoMakie
-CairoMakie.activate!()
+using CairoMakie
+#CairoMakie.activate!()
 
 
 showlines = false
 f_hr_ion = Figure(size = (900, 800))
-sleep(1)
+sleep(2)
 axs_ion = [Axis(f_hr_ion[row, col], 
     #xlabel = "Radial Distance [m]", 
     #ylabel = "Height [km]", 
