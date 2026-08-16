@@ -9,11 +9,13 @@ b_model = "vertical"
 # Define initial energy
 #E0 = 1e4 #eV
 e_energy = [500, 1e3, 2e3, 4e3, 8e3, 16e3, 32e3]
+e_energy = [4e3, 10e3, 40e3]
+
 #e_energy = [4e3, 10e3]
 
 # Define number of particles in one batch
 N_electrons = 1e3
-nbatches = 90
+nbatches = 10
 
 # starting altitude
 alt0 = 600e3 #m
@@ -28,6 +30,9 @@ pitch_angle_distribution = "isotropic_below"
 #pitch_limits_deg = 65:1:75
 #pitch_limits_deg = [60]
 #pitch_angle_distribution = "single_angle"
+pitch_limits_deg = 60:1:70
+pitch_angle_distribution = "single_angle"
+
 
 
 nPerGyro = 20
@@ -44,13 +49,10 @@ loc_gmag = loc_gmag_deg ./ 180 * pi
 loc_geod_deg = [69.58, 19.23]
 loc_geod = loc_geod_deg ./ 180 * pi
 
-name = "r17_reevaluate-correctedMagField_"
+name = "r18_pitchAngle_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 200
-
-
-
+nprocesses = 30
 
 """
 TO DO

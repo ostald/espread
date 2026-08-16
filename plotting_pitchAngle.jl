@@ -121,7 +121,7 @@ save(joinpath(dir, "plots", "production_profile_sum90.png"), fig, px_per_unit = 
 
 ##
 
-dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
+dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
 dir_con = readdir(joinpath(dir, "hist_summed"))
 
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
@@ -146,8 +146,8 @@ ax = Axis(f[1, 1],
         #xticks = LogTicks(-4:-2),
         #title = "Production vs Height isotropic"
         )
-#for r in runs_xyz_40kev[1:5]
-for r in runs_xyz
+for r in runs_xyz_10kev[1:4]
+#for r in runs_xyz
     println(r)
     io = open(joinpath(dir, "hist_summed", r), "r")
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_xyz = deserialize(io)
@@ -157,17 +157,20 @@ for r in runs_xyz
     #dA = diff(his_xyz.edges[1])[1]*diff(his_xyz.edges[2])[1]
     z_edges = his_xyz.edges[3]
     z_middle = z_edges[1:end-1] + diff(z_edges)/2   
-    lines!(ax, data/1e6, z_middle/1e3, label = "MC $E0 eV, $lim_pitch_deg")
+    lines!(ax, data/1e6, z_middle/1e3, label = "$(round(Int, E0/1000)) keV, $(round(Int, lim_pitch_deg)) deg")
 end
 axislegend(ax)
 xlims!(1e-5, 1e0)
+xlims!(1e-6, 1e-2)
 ylims!(80, 400)
 f
 save(joinpath(dir, "plots", "production_profile_pitch_angle_scan_$(E0)eV.png"), f, px_per_unit = 3.3)
 ##
 
+dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
 
-draw_plim=string(63)
+
+draw_plim=string(65)
 f = Figure()
 sleep(1)
 ax = Axis(f[1, 1], 
@@ -190,6 +193,7 @@ data = dropdims(sum(his_hrp.weights, dims = (2, 3)), dims = (2, 3))
 h_edges = his_hrp.edges[1]
 h_middle = h_edges[1:end-1] + diff(h_edges)/2   
 lines!(ax, data/1e6, h_middle/1e3, label = "MC $E0 eV, $lim_pitch_deg")
+f
 
 r =  "h_hrp_40000.0eV_$draw_plim.0deg_summed.hist"
 println(r)
