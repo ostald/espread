@@ -3,17 +3,8 @@ using StatsBase
 include("analysis_util.jl")
 include("constants.jl")
 
-
-dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-#dir = "results/r6_conicB_60deg_2026-02-04T11:34:56.964/"
-#dir = "results/r7_conicB_16kev2026-01-22T11:49:34.639/"
-#dir = "results/r10_scatter45deg_2026-01-26T17:12:40.089/"
-#dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
-#dir = "results/r11_conicB_32keV_2026-02-04T14:41:43.343/"
-#dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
-dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
-dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
 dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
+dir = "results/r17_reevaluate-correctedMagField_2026-08-15T20:00:37.960/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -22,7 +13,7 @@ if !isdir(joinpath(dir, "hist"))
 end
 
 for file in dir_con_raw
-#    file = dir_con_raw[2]
+    #file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
     n_electrons = size(filter(x -> x.generation == 1, df), 1)
@@ -147,7 +138,7 @@ end
 
 dir_con_raw = filter(x-> contains(x, "90.0deg"), dir_con_raw)
 for file in dir_con_raw
-#    file = dir_con_raw[2]
+    #file = dir_con_raw[2]
     println("Processing file: ", file)
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
     n_electrons = size(filter(x -> x.generation == 1, df), 1)

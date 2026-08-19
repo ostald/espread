@@ -20,11 +20,7 @@ include("analysis_util.jl")
 include("constants.jl")
 include("magnetic_field.jl")
 
-dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-#dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
-dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
-dir = "results/r14_pitchAngle_2026-05-07T14:46:40.781/"
-dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
+dir = "results/r17_reevaluate-correctedMagField_2026-08-15T20:00:37.960/"
 
 if !isdir(joinpath(dir, "plots"))
     mkdir(joinpath(dir, "plots"))

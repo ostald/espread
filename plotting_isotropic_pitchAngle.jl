@@ -1,6 +1,6 @@
 using Serialization
 using DataFrames
-#using LinearAlgebra
+using LinearAlgebra
 #using CSV
 #using ImageFiltering
 
@@ -11,20 +11,15 @@ using Bonito
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
 
-#using WGLMakie
+using WGLMakie
+WGLMakie.activate!()
 using CairoMakie
 CairoMakie.activate!()
-#WGLMakie.activate!()
 
 include("analysis_util.jl")
 
-dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
-#dir = "results/r8_conicB_He_500eV_2026-01-21T19:21:08.258/"
-dir = "results/r12_pitchAngle_2026-03-06T16:58:01.010/"
-dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
-#dir = "results/r13_pitchAngle_2026-05-06T17:41:50.299/"
-#dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
-dir_con = readdir(joinpath(dir, "hist_summed"))
+dir = "results/r17_reevaluate-correctedMagField_2026-08-15T20:00:37.960/"
+#dir_con = readdir(joinpath(dir, "hist_summed"))
 dir_con = readdir(joinpath(dir, "hist_pitch_summed"))
 dir_con_raw = filter(x-> contains(x, ".hist"), dir_con)
 runs = unique(dir_con_raw)
@@ -55,9 +50,13 @@ io = open(joinpath(dir, r), "r")
 #include("Magne")
 
 
+if !isdir(joinpath(dir, "plots"))
+    mkdir(joinpath(dir, "plots"))
+end
+
 
 ##
-r = runs[2]
+r = runs[end]
 println(r)
 io = open(joinpath(dir, "hist_pitch_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_pitch, ne_pitch_summed = deserialize(io)
@@ -67,6 +66,7 @@ close(io)
 #his_pitch.weights = (his_pitch.weights' ./ ne_pitch_summed)'
 # replace his_pitch with a copy, to be able to replace weights (Int) with
 # n_primary normalized weights
+
 h = zero(his_pitch)
 h = normalize(h)
 h.weights = (his_pitch.weights' ./ ne_pitch_summed)'
@@ -90,11 +90,12 @@ fig
 xlims!(0, 90)
 =#
 
-id = 67
+id = 68
 fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id]))) - $(round(rad2deg(pitch_edges[id+1])))",
-    axis = (xscale = log10, limits = ((1e-5, 1e0), nothing)),)
+    axis = (xscale = log10, limits = ((1e-3, 1e1), nothing)),)
 lines!(ax, his_pitch.weights[:, id-1], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id-1]))) - $(round(rad2deg(pitch_edges[id])))")
 axislegend(ax)
+ylims!(60, 300)
 fig
 
 #=
@@ -110,11 +111,21 @@ fig
 
 id = 68
 data = dropdims(sum(his_pitch.weights[:, id:end], dims = 2), dims = 2)
-fig, ax, lin = lines(data, z_middle./1e3, label = "$(round(Int, rad2deg(pitch_edges[id])))° - 90°",
-    axis = (xscale = log10, limits = ((1e-5, 1e1), nothing)),)
-lines!(ax, his_pitch.weights[:, id], z_middle./1e3, label = "$(round(Int, rad2deg(pitch_edges[id])))° - $(round(Int, rad2deg(pitch_edges[id+1])))°",)
+fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, 
+    label = "$(round(Int, rad2deg(pitch_edges[id])))° - $(round(Int, rad2deg(pitch_edges[id+1])))°",
+    axis = (xscale = log10, 
+        limits = ((1e-3, 1e1), (60, 400)),
+        xlabel = "Production [m⁻³]",
+        ylabel = "Height [km]",
+        title = "Extended Pitch Angle Source"
+        ),
+    )
+lines!(ax, data, z_middle./1e3, label = "$(round(Int, rad2deg(pitch_edges[id])))° - 90°",)
 axislegend(ax)
-xlims!(1e-4, 1e0)
+ylims!(60, 400)
+
+xlims!(1e-3, 1e1)
+
 fig
 save(joinpath(dir, "plots", "production_profile_sum90.png"), fig, px_per_unit = 3.3)
 

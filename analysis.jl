@@ -1,5 +1,4 @@
 using StatsBase
-#using CSV
 using DataFrames
 using LinearAlgebra
 using JLD2
@@ -10,7 +9,7 @@ include("constants.jl")
 include("magnetic_field.jl")
 
 #dir = "results/run1_2025-07-19T21:53:59.887/"
-dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
+dir = "results/r18_pitchAngle_2026-08-16T02:40:58.062/"
 if !isdir(joinpath(dir, "plots"))
     mkdir(joinpath(dir, "plots"))
 end
@@ -23,10 +22,10 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
 
 #for r in runs
     #filter_crit = r
-    filter_crit = "res_8000.0eV_20.0deg"
+    filter_crit = "res_4000.0eV_60.0deg_"
 
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
-    files = files[1:10]
+    #files = files[1:10]
 
 #    res = Vector{Any}(undef, length(files))
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
