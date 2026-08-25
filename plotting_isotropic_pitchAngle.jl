@@ -56,7 +56,7 @@ end
 
 
 ##
-r = runs[end]
+r = runs[4]
 println(r)
 io = open(joinpath(dir, "hist_pitch_summed", r), "r")
 E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_pitch, ne_pitch_summed = deserialize(io)
@@ -66,14 +66,14 @@ close(io)
 #his_pitch.weights = (his_pitch.weights' ./ ne_pitch_summed)'
 # replace his_pitch with a copy, to be able to replace weights (Int) with
 # n_primary normalized weights
-
+"""
 h = zero(his_pitch)
 h = normalize(h)
 h.weights = (his_pitch.weights' ./ ne_pitch_summed)'
 h.isdensity = false
 his_pitch = h
 his_pitch.weights[isnan.(his_pitch.weights)] .= 0
-
+"""
 pitch_edges = his_pitch.edges[2]
 pitch_middle = pitch_edges[1:end-1] + diff(pitch_edges)/2
 z_edges = his_pitch.edges[1]
@@ -90,12 +90,12 @@ fig
 xlims!(0, 90)
 =#
 
-id = 68
+id = 67
 fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id]))) - $(round(rad2deg(pitch_edges[id+1])))",
     axis = (xscale = log10, limits = ((1e-3, 1e1), nothing)),)
 lines!(ax, his_pitch.weights[:, id-1], z_middle./1e3, label = "$(round(rad2deg(pitch_edges[id-1]))) - $(round(rad2deg(pitch_edges[id])))")
 axislegend(ax)
-ylims!(60, 300)
+ylims!(60, 400)
 fig
 
 #=
@@ -109,25 +109,48 @@ fig
 =#
 
 
-id = 68
+id = 67
 data = dropdims(sum(his_pitch.weights[:, id:end], dims = 2), dims = 2)
 fig, ax, lin = lines(his_pitch.weights[:, id], z_middle./1e3, 
     label = "$(round(Int, rad2deg(pitch_edges[id])))° - $(round(Int, rad2deg(pitch_edges[id+1])))°",
     axis = (xscale = log10, 
-        limits = ((1e-3, 1e1), (60, 400)),
+        limits = (nothing, (60, 400)),
         xlabel = "Production [m⁻³]",
         ylabel = "Height [km]",
-        title = "Extended Pitch Angle Source"
+        title = "Extended Pitch Angle Source $(round(Int, E0/1e3)) keV"
         ),
     )
 lines!(ax, data, z_middle./1e3, label = "$(round(Int, rad2deg(pitch_edges[id])))° - 90°",)
 axislegend(ax)
-ylims!(60, 400)
+ylims!(60, 300)
 
-xlims!(1e-3, 1e1)
+xlims!(1e0, 1e4)
 
 fig
 save(joinpath(dir, "plots", "production_profile_sum90.png"), fig, px_per_unit = 3.3)
 
 
 
+function moving_average(a)
+    aminus1 = [a[2:end]; a[end]]
+    aplus1 = [a[1]; a[1:end-1]]
+    return (aminus1 + a + aplus1)/3
+end
+
+fig, ax, lin = lines(moving_average(his_pitch.weights[:, id]), z_middle./1e3, 
+    label = "$(round(Int, rad2deg(pitch_edges[id])))° - $(round(Int, rad2deg(pitch_edges[id+1])))°",
+    axis = (xscale = log10, 
+        limits = ((1e-3, 1e1), (60, 400)),
+        xlabel = "Production [m⁻³]",
+        ylabel = "Height [km]",
+        title = "Extended Pitch Angle Source $(round(Int, E0/1e3)) keV"
+        ),
+    )
+lines!(ax, moving_average(data), z_middle./1e3, label = "$(round(Int, rad2deg(pitch_edges[id])))° - 90°",)
+axislegend(ax)
+ylims!(60, 300)
+
+xlims!(1e-3, 1e1)
+
+fig
+save(joinpath(dir, "plots", "production_profile_sum90_ma.png"), fig, px_per_unit = 3.3)

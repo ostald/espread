@@ -190,7 +190,7 @@ axs_ion = [Axis(f_hr_ion[row, col],
     limits = ((nothing, 20), (50, 600)),
     ytickformat = values -> ["" for value in values], 
     xtickformat = values -> ["" for value in values]
-    ) for row in 1:1, col in 1:2] 
+    ) for row in 1:3, col in 1:2] 
 [ax.xtickformat = values -> ["$(value)" for value in values] for ax in axs_ion[end, :]]
 [ax.ytickformat = values -> ["$(value)" for value in values] for ax in axs_ion[:, 1]]
 [ax.xminorticks = [1, 2, 3, 4] for ax in axs_ion[:]]
@@ -198,7 +198,7 @@ axs_ion = [Axis(f_hr_ion[row, col],
 [ax.xminorgridvisible = true for ax in axs_ion[:]]
 
 
-f_hr_prod = Figure(size = (900, 400))
+f_hr_prod = Figure(size = (900, 800))
 sleep(1)
 axs_prod = [Axis(f_hr_prod[row, col], 
 #    xlabel = "Radial Distance [m]", 
@@ -206,7 +206,7 @@ axs_prod = [Axis(f_hr_prod[row, col],
     limits = ((nothing, 20), (50, 600)),
     ytickformat = values -> ["" for value in values],
     xtickformat = values -> ["" for value in values]
-    ) for row in 1:1, col in 1:2] 
+    ) for row in 1:3, col in 1:2] 
 [ax.xtickformat = values -> ["$(Int(value))" for value in values] for ax in axs_prod[end, :]]
 [ax.ytickformat = values -> ["$(Int(value))" for value in values] for ax in axs_prod[:, 1]]
 [ax.xminorticks = [1, 2, 3, 4] for ax in axs_prod[:]]
@@ -214,7 +214,7 @@ axs_prod = [Axis(f_hr_prod[row, col],
 [ax.xminorgridvisible = true for ax in axs_prod[:]]
 
 
-f_prod_r_h = Figure(size = (900, 400))
+f_prod_r_h = Figure(size = (900, 800))
 sleep(1)
 axs_r_h = [Axis(f_prod_r_h[row, col], 
 #    xlabel = "Radial Distance [m]", 
@@ -224,7 +224,7 @@ axs_r_h = [Axis(f_prod_r_h[row, col],
     xticks = [-30, -20, -10, 0, 10, 20, 30],
     ytickformat = values -> ["" for value in values],
     xtickformat = values -> ["" for value in values]
-    ) for row in 1:1, col in 1:2] 
+    ) for row in 1:3, col in 1:2] 
 [ax.xtickformat = values -> ["$(Int(value))" for value in values] for ax in axs_r_h[end, :]]
 [ax.ytickformat = Makie.automatic for ax in axs_r_h[:, 1]]
 [ax.xminorticks=IntervalsBetween(2) for ax in axs_r_h[:]]
@@ -238,7 +238,7 @@ heights = [95, 105, 120, 140, 200, 350]
 hm_ion = nothing
 hm_prod = nothing
 
-for (i2, collection) in enumerate([runs_hrp_20[6:2:end], runs_hrp_90[6:2:end]])
+for (i2, collection) in enumerate([runs_hrp_20[2:2:end], runs_hrp_90[2:2:end]])
     for (i1, r) in enumerate(collection)
         #io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_20.0deg_summed.hist"), "r")
         io = open(joinpath(dir, "hist_summed", r), "r")
@@ -375,8 +375,8 @@ for (i2, collection) in enumerate([runs_hrp_20[6:2:end], runs_hrp_90[6:2:end]])
     end
 end
 
-Colorbar(f_hr_ion[1:1, 3], hm_ion, label="Counts [1]")
-Colorbar(f_hr_prod[1:1, 3], hm_prod, label="Production [m⁻³]")
+Colorbar(f_hr_ion[1:3, 3], hm_ion, label="Counts [1]")
+Colorbar(f_hr_prod[1:3, 3], hm_prod, label="Production [m⁻³]")
 
 axs_ion[1, 1].title = L"\mathbf{\mathrm{field-aligned \, \theta_{lim} = 20^{\degree}}}"
 axs_ion[1, 2].title = "isotropic"
@@ -421,7 +421,7 @@ save(joinpath(dir, "plots", "panel_prod_r_h_all_E_pitch.png"), f_prod_r_h, px_pe
 # 3. altidute slice of production vs radial distance
 # with 1/e vertical lines
 
-WGLMakie.activate!()
+#WGLMakie.activate!()
 #using CairoMakie
 CairoMakie.activate!()
 
@@ -568,7 +568,7 @@ display(f_prod_r_h)
 # energy vs width plot
 
 CairoMakie.activate!()
-WGLMakie.activate!()
+#WGLMakie.activate!()
 fig = Figure(size = (800, 450))
 sleep(2)
 xticklabels = [rich(value, superscript("1/2")) for value in ["0", "0.5", "2", "4", "8", "16", "32"]]
@@ -680,8 +680,8 @@ scatterlines!(ax2, rg_array, 2 .* width_20 ./ rg_array ./sin(20/180*pi), color =
 errorbars!(ax2, rg_array, 2 .* width_20./ rg_array./sin(20/180*pi), err_width_20./ rg_array./sin(20/180*pi), color = Makie.wong_colors()[1])
 scatterlines!(ax2, rg_array, 2 .* width_90./ rg_array, color = Makie.wong_colors()[2],label = "isotropic")
 errorbars!(ax2, rg_array, 2 .* width_90./ rg_array, err_width_90./ rg_array, color = Makie.wong_colors()[2])
-#display(fig)
-#save(joinpath(dir, "plots", "width_h_int.png"), fig, px_per_unit = 3.3)
+display(fig)
+save(joinpath(dir, "plots", "width_h_int.png"), fig, px_per_unit = 3.3)
 
 
 
@@ -701,7 +701,7 @@ x = [0.1, 33]*1e3
 lines!(ax, sqrt.(x/1e3), linear(sqrt.(x), fit_90.param))
 lines!(ax, sqrt.(x/1e3), linear(sqrt.(x), fit_20.param))
 
-#display(fig)
+display(fig)
 #____________________________________________________________________________________________________
 ##
 #some experiments to find the unceratinty in width 
@@ -764,7 +764,7 @@ errorbars!([w], [d1e], [deltaw], direction =:x)
 # all energies in one plot
 # two plots for isotropic/field aligned
 
-WGLMakie.activate!()
+#WGLMakie.activate!()
 CairoMakie.activate!()
 
 #for (i2, collection) in enumerate(zip(runs_hrp_20, runs_hrp_90))
