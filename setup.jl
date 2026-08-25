@@ -19,7 +19,7 @@ nbatches = 1
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-pitch_limits_deg = [90]
+pitch_limits_deg = [20]
 pitch_angle_distribution = "isotropic_below"
 #lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
