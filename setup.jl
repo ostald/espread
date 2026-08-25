@@ -13,13 +13,13 @@ e_energy = [100e3]
 
 # Define number of particles in one batch
 N_electrons = 1e2
-nbatches = 1
+nbatches = 100
 
 # starting altitude
 alt0 = 600e3 #m
 
 # Define pitch angle limits
-pitch_limits_deg = [20]
+pitch_limits_deg = [90]
 pitch_angle_distribution = "isotropic_below"
 #lim_pitch_deg = 20 #deg
 #lim_pitch = lim_pitch_deg/180*pi
@@ -50,7 +50,7 @@ loc_geod = loc_geod_deg ./ 180 * pi
 name = "r19_Yuri_pulsatingAurora_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 1
+nprocesses = 100
 
 """
 TO DO
