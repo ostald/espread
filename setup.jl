@@ -13,7 +13,7 @@ e_energy = [100e3]
 
 # Define number of particles in one batch
 N_electrons = 1e2
-nbatches = 100
+nbatches = 1
 
 # starting altitude
 alt0 = 600e3 #m
@@ -50,7 +50,7 @@ loc_geod = loc_geod_deg ./ 180 * pi
 name = "r19_Yuri_pulsatingAurora_"
 res_dir = joinpath("results", name * string(now()))
 
-nprocesses = 100
+nprocesses = 1
 
 """
 TO DO

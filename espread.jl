@@ -338,7 +338,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     seed_value = rand(Int)
     Random.seed!(seed_value)
     
-    hmin = 80e3     #m
+    hmin = 60e3     #m
     hmax = alt0+1e4 #m
     hintervals = 1e2 #m
     densityf = make_densityf(hmin, hmax, hintervals, loc_geod)
