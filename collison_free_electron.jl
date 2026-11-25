@@ -8,7 +8,7 @@ include("ionosphere.jl")
 b_model = "dipole"
 lim_pitch_deg = 20
 pitch_angle_distribution = "single_angle"
-E0 = 25.0 #ev
+E0 = 2500.0 #ev
 name = "r20_ee_loss_comparison_"
 res_dir = joinpath("results", name * string(now()))
 mkdir(res_dir)

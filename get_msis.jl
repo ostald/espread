@@ -1,7 +1,10 @@
 using SatelliteToolboxAtmosphericModels
 using SatelliteToolboxBase
 using PCHIPInterpolation: Interpolator
-SpaceIndices.init()
+# Load space weather indices (F10.7, Ap) from a local copy of Celestrak's SW-All.csv,
+# so nothing is downloaded. MSIS only needs the Celestrak set, not JB2008.
+# To refresh: download https://celestrak.org/SpaceData/SW-All.csv into data/
+SpaceIndices.init(SpaceIndices.Celestrak; filepaths = [joinpath(@__DIR__, "data", "SW-All.csv")])
 
 function msis(times, heights, lats, longs)
     jdate = [date_to_jd(tt...) for tt in times]
