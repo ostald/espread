@@ -5,6 +5,7 @@ include("constants.jl")
 
 dir = "results/r16_reevaluate-correctedMagField_2026-07-08T17:41:57.774/"
 dir = "results/r17_reevaluate-correctedMagField_2026-08-15T20:00:37.960/"
+dir = "results/r19_Yuri_pulsatingAurora_2026-08-25T16:10:33.477/"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -56,8 +57,8 @@ for file in dir_con_raw
 
 
     #define histogram bins
-    h_edges = collect(80e3:1e3:600e3)
-    r_edges = collect(0:0.1:40)
+    h_edges = collect(60e3:1e2:300e3)
+    r_edges = collect(0:0.5:100)
     p_edges = collect(-pi:pi/36:pi)
 
     h_middle = h_edges[1:end-1] + diff(h_edges)/2
@@ -145,7 +146,7 @@ for file in dir_con_raw
     if n_electrons != 1000
         println("number of electrons in this batch: ", n_electrons)
     end
-    @assert n_electrons == 1000
+    #@assert n_electrons == 1000
 
     df.E0 = E_ev.(norm.(df.v0))
     df.E_end = E_ev.(norm.(df.v))

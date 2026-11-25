@@ -13,8 +13,8 @@ Bonito.set_cleanup_time!(1)
 
 using WGLMakie
 WGLMakie.activate!()
-#using CairoMakie
-#CairoMakie.activate!()
+using CairoMakie
+CairoMakie.activate!()
 
 include("analysis_util.jl")
 
@@ -69,14 +69,15 @@ for r in runs_xyz_10kev[5:9]
     z_middle = z_edges[1:end-1] + diff(z_edges)/2   
     lines!(ax, data/1e6, z_middle/1e3, label = "$(round(Int, E0/1000)) keV, $(round(Int, lim_pitch_deg))° ")
 end
-#for r in r1[1:4]
-#    hlines!(ax, r, label="mirror" * string(r))
-#end
+for r in r1[1:4]
+    hlines!(ax, r, #label="mirror" * string(r),
+        linestyle = (:dot, :loose), color = "black")
+end
 axislegend(ax)
 xlims!(1e-5, 1e0)
 #xlims!(1e-6, 1e-2)
-ylims!(60, 300)
-#f
+ylims!(80, 300)
+f
 save(joinpath(dir, "plots", "production_profile_pitch_angle_scan_$(E0)eV.png"), f, px_per_unit = 3.3)
 ##
 #__________________________________________________________________________________________________________________

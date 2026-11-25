@@ -127,21 +127,23 @@ lines([(a.He_number_density
     a.He_number_density) for a in atm][:], hmsis/1e3)
 
 
-fig, ax, l = lines([a.N2_number_density 
-    for a in atm][:], hmsis/1e3, label = "N₂",
+fig, ax, l = lines([a.O_number_density 
+    for a in atm][:], hmsis/1e3, label = "O",
+    color = "red",
     axis = (xscale = log10,
         xlabel = "Density [m⁻³]",
         ylabel = "Height [km]",
         ),
     )
+lines!([a.N2_number_density 
+    for a in atm][:], hmsis/1e3, label = "N₂")
+lines!(1e10, 100)
 lines!([a.O2_number_density 
     for a in atm][:], hmsis/1e3, label = "O₂")
-lines!([a.O_number_density 
-    for a in atm][:], hmsis/1e3, label = "O")
-lines!([a.H_number_density 
-    for a in atm][:], hmsis/1e3, label = "H")
-lines!([a.He_number_density 
-    for a in atm][:], hmsis/1e3, label = "He")
+#lines!([a.H_number_density 
+#    for a in atm][:], hmsis/1e3, label = "H")
+#lines!([a.He_number_density 
+#    for a in atm][:], hmsis/1e3, label = "He")
 axislegend(ax)
 display(fig)
 save("figures/atmosphere.png", fig, px_per_unit = 3.3)

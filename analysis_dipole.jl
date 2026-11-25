@@ -140,8 +140,10 @@ n_mfp = 1
 E0 = 10000.0
 lim_pitch = 20/180*pi
 densityf(alt) = 0
+
+#initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, ne_int, Te_int, pitch_angle_distribution)
 r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c)
-status, r, v, t = ode_boris_mover_mfp(n_mfp, [r0; v0], -c.qe, c.me, dipole_field_earth!, cs_all_sum, densityf)#; OPS = [])
+status, r, v, t = ode_boris_mover_mfp(n_mfp, [r0; v0], -c.qe, c.me, dipole_field_earth!, cs_all_sum, densityf, Te_int, ne_int)#; OPS = [])
 
 rp = [copy(c) for c in eachcol(r)]
 r_filtered = filter(x -> altitude(x) > filter_hmin && altitude(x) < filter_hmax, rp)
@@ -157,4 +159,5 @@ ylims!(ax, 0, 3)
 xlims!(ax, -0.1, 0.1)
 
 
-altitude(r[:, end])r
+altitude(r[:, end])
+r

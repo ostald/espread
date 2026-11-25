@@ -44,17 +44,19 @@ using WGLMakie
 p = [Point3([0, y, z]) for y in yy for z in zz]
 v = Vec3.(convergent_vertical_field_demo.(p))
 s = sqrt.(dot.(v, transpose.(v))).*1e6
+cm = Makie.to_colormap(Reverse(:viridis))[40:end-40]
 fig, ax, arr = arrows2d(Point2.([[pp[2], pp[3]/1e3 - c.re/1e3] for pp in p]),
     Point2.([[pp[2], pp[3]/1e3] for pp in v]), 
     lengthscale = 1e9/1.5, 
     color = s, 
     align = :center, 
-    colormap = :batlow,
+    colormap = cm,
     #axis=(type=Axis3, azimuth = 0, elevation = 0),
     axis = (xlabel = "Horizontal Distance [m]", 
         ylabel = "Altitude [km]")
     )
-Colorbar(fig[1, 2], arr, label = "Magnetic Field [mT]")
+#arr.colorrange = (maximum(s), minimum(s))
+Colorbar(fig[1, 2], arr, label = "Magnetic Field [mT]")#, flipaxis = true)
 fig
 save("figures/conicB.png", fig)
 """

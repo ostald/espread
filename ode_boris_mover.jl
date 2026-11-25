@@ -2,7 +2,7 @@ using LinearAlgebra
 include("constants.jl")
 
 
-function ode_boris_mover_mfp(n_mfp, r0, v0, q, m, Bin!, sigma, densityf; trace = false, nPerGyro = 20)#; OPS = [])
+function ode_boris_mover_mfp(n_mfp, r0, v0, q, m, Bin!, sigma, densityf, ne_int, Te_int; trace = false, nPerGyro = 20)#; OPS = [])
   # returns:
   #   state:  0=failure, 
   #           1=regular completion until n_mfp is reached, 
@@ -168,6 +168,15 @@ function ode_boris_mover_mfp(n_mfp, r0, v0, q, m, Bin!, sigma, densityf; trace =
 
     #running sum of mfp
     mfp_running = mfp_running + dr_mfp
+
+    # add electron electron energy loss
+    Te_z = Te_int(alt)
+    ne_z = ne_int(alt)
+    Ee = 8.618e-5 * Te_z 
+    dEdt = 2e-4 * ((ne_z/1e6)^0.97) / (Ekin^0.44) * (((Ekin - Ee)/(Ekin - (0.53 * Ee)))^2.36)
+    E = Ekin - dEdt*Dt
+    v = v .* sqrt(E/Ekin)
+    Ekin = E
   end
 
   if trace

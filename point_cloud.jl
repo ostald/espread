@@ -1,4 +1,4 @@
-#using WGLMakie
+using WGLMakie
 using CairoMakie
 #using DataFrames
 include("analysis_util.jl")
@@ -6,6 +6,7 @@ include("constants.jl")
 
 dir = "results/r4_conicB_2025-09-05T14:19:27.566/"
 #dir = "results/r9_pitchAngle2026-01-26T11:09:00.654/"
+dir = "results/r19_Yuri_pulsatingAurora_2026-08-25T16:10:33.477"
 dir_con = readdir(dir)
 dir_con_raw = filter(x-> contains(x, ".bin"), dir_con)
 
@@ -13,13 +14,13 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
 
 # static plot
 if false
-#for r in runs[9:end]
-    #println("Processing run: ", r)
-    #filter_crit = r
-    filter_crit = runs[10]
+#for r in runs[1:end]
+    println("Processing run: ", r)
+    filter_crit = r
+    filter_crit = runs[1]
 
     files = filter(x-> contains(x, filter_crit), dir_con_raw)
-    files = files[1:2]
+    files = files[1:20]
 
     df = DataFrame()
     df_ion = DataFrame()
@@ -27,7 +28,7 @@ if false
     df_escaping = DataFrame()
     E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals = [0, 0, 0, 0, 0, 0]
 
-    #@time for (id, file) in enumerate(files)
+    @time for (id, file) in enumerate(files)
         E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, df = load_result(joinpath(dir, file))
         
         #df.E0 = E_ev.(norm.(df.v0))
@@ -49,15 +50,15 @@ if false
             p0 = [0, 0, c.re]
             #df.pos = [p - p0 for p in df.pos_earth_centered]
             for particle in eachrow(filter(:alt_end => x-> x < 599e3, df)) #non-escaping
-                push!(df_ion, (pos = (particle.pos_earth_centered - p0) .* [1, 1, 1e3] , generation = particle.generation,))
+                push!(df_ion, (pos = (particle.pos_earth_centered - p0) .* [1, 1, 1e-3] , generation = particle.generation,))
             end
 
             for particle in eachrow(filter(:alt_end => x-> x > 599e3, df)) #escaping
-                push!(df_escaping, (pos = (particle.r - p0) .* [1, 1, 1e3], generation = particle.generation, v = particle.v,)) 
+                push!(df_escaping, (pos = (particle.r - p0) .* [1, 1, 1e-3], generation = particle.generation, v = particle.v,)) 
             end
 
             for particle in eachrow(filter(:generation => x-> x == 1, df)) #primary
-                push!(df_primary_injection, (pos = (particle.r0 - p0) .* [1, 1, 1e3],)) 
+                push!(df_primary_injection, (pos = (particle.r0 - p0) .* [1, 1, 1e-3],)) 
             end
 
         #elseif contains(dir, "dipole")
@@ -65,16 +66,16 @@ if false
         #else
         #    error("unknown field model")
         #end
-    #end
+    end
 
-    fig, ax, h = hist(df_ion.pos)
+    #fig, ax, h = hist(df_ion.pos)
 
     alpha = 0.25
     markersize = 1
     
     # 3d point plot of endpoints (earth centered coordinates)
-    fig = Figure()
-    sleep(2)
+    fig = Figure(size= (1200, 900)./1.5)
+    sleep(10)
     ax = Axis3(fig[1, 1],
         aspect=(1, 1, 1), 
         viewmode=:fit, 
@@ -82,6 +83,7 @@ if false
         xlabel = "x [m]",
         ylabel = "y [m]",
         zlabel = "z [km]",
+        limits = ((-100, 100), (-100, 100), (60, 150)),
         )
     #sleep(2)
     sc = scatter!(ax,Point3.(df_primary_injection.pos),
@@ -106,6 +108,11 @@ if false
         markersize = markersize*2, alpha = alpha*2, transparency = true, 
         label = "escaping Secondaries" => (; markersize = 15, alpha = 1))#,
     
+
+    
+    using Bonito    
+    Bonito.set_cleanup_time!(1)
+
     sc = scatter!(ax,Point3.(filter(:generation => x-> x > 0, df_ion).pos), 
         markersize = markersize, alpha = alpha, transparency = true, 
         label = "End Primary" => (; markersize = 15, alpha = 1))#,
@@ -122,18 +129,21 @@ if false
         #axis=(limits=(nothing, nothing, nothing),),)
     #sleep(2)
     #zlims!(ax, 599.9999, 600.0001)
-    #zlims!(ax, 60, 6.4e2)
-    ylims!(ax, -30, 30)
-    xlims!(ax, -30, 30)
+    #display(fig)
+    #zlims!(ax, 60, 250)
+    #ylims!(ax, -100, 100)
+    #xlims!(ax, -100, 100)
     sleep(2)
     axislegend() 
-    save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_pitchAngle.png"), fig)
+    display(fig)
+    save(joinpath(dir, "plots", "position_$(E0)_$(lim_pitch_deg)_pitchAngle_zoom.png"), fig)
 
-#end
 end
+#end
 
 
 #rotating plot
+#=
 using Distributed
 prcs = addprocs(10, env=["JULIA_WORKER_TIMEOUT" => "500"])
 
@@ -147,7 +157,9 @@ prcs = addprocs(10, env=["JULIA_WORKER_TIMEOUT" => "500"])
 runs = unique([d[1:end-8] for d in dir_con_raw])
 
 # static plot
-@distributed for r in runs
+#@distributed 
+=#
+for r in runs
     #r = runs[8]
     println("Processing run: ", r)
     filter_crit = r
@@ -179,7 +191,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         #choose ending position for primary electrons, starting position for secondaries:
         df.pos_earth_centered = ifelse.(df.generation .== 1, df.r, df.r0)
          
-        if contains(dir, "conic")
+        #if contains(dir, "conic")
             p0 = [0, 0, c.re]
             #df.pos = [p - p0 for p in df.pos_earth_centered]
             for particle in eachrow(filter(:alt_end => x-> x < 599e3, df)) #non-escaping
@@ -194,11 +206,11 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
                 push!(df_primary_injection, (pos = (particle.r0 - p0) .* [1, 1, 1e-3],)) 
             end
 
-        elseif contains(dir, "dipole")
-            error("not implemented yet")
-        else
-            error("unknown field model")
-        end
+        #elseif contains(dir, "dipole")
+        #    error("not implemented yet")
+        #else
+        #    #error("unknown field model")
+        #end
     end
 
 
@@ -231,9 +243,11 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
         label = "Ionizations" => (; markersize = 15, alpha = 1))#,
     
     sleep(2)
-    zlims!(ax, 60, 6.4e2)
-    ylims!(ax, -30, 30)
-    xlims!(ax, -30, 30)
+    zlims!(ax, 60, 150)
+    ylims!(ax, -100, 100)
+    xlims!(ax, -100, 100)
+    #ylims!(ax, -30, 30)
+    #xlims!(ax, -30, 30)
     sleep(2)
     display(fig)
     #axislegend() 
@@ -248,7 +262,7 @@ runs = unique([d[1:end-8] for d in dir_con_raw])
     el_iterator[180:270] .= 0
     el_iterator[270:360] .= range(0, pi/8, length=length(el_iterator[270:360]))
 
-    record(fig, "point_cloud_$(E0)eV_$(lim_pitch_deg)deg_v2.mp4", zip(az_iterator, el_iterator);
+    record(fig, "point_cloud_$(E0)eV_$(lim_pitch_deg)deg_v2_zoom.mp4", zip(az_iterator, el_iterator);
             framerate = framerate) do (az, el)
         ax.azimuth = az
         ax.elevation = el

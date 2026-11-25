@@ -11,8 +11,8 @@ using Bonito
 Bonito.set_cleanup_time!(1)
 # ssh -L 9384:localhost:9384 user@server
 
-#using WGLMakie
-#WGLMakie.activate!()
+using WGLMakie
+WGLMakie.activate!()
 using CairoMakie
 CairoMakie.activate!()
 
@@ -20,7 +20,7 @@ include("analysis_util.jl")
 include("constants.jl")
 include("magnetic_field.jl")
 
-dir = "results/r17_reevaluate-correctedMagField_2026-08-15T20:00:37.960/"
+dir = "results/r19_Yuri_pulsatingAurora_2026-08-25T16:10:33.477"
 
 if !isdir(joinpath(dir, "plots"))
     mkdir(joinpath(dir, "plots"))
@@ -203,7 +203,7 @@ sleep(1)
 axs_prod = [Axis(f_hr_prod[row, col], 
 #    xlabel = "Radial Distance [m]", 
 #    ylabel = "Height [km]", 
-    limits = ((nothing, 20), (50, 600)),
+    limits = ((nothing, 80), (60, 100)),
     ytickformat = values -> ["" for value in values],
     xtickformat = values -> ["" for value in values]
     ) for row in 1:3, col in 1:2] 
@@ -238,17 +238,17 @@ heights = [95, 105, 120, 140, 200, 350]
 hm_ion = nothing
 hm_prod = nothing
 
-for (i2, collection) in enumerate([runs_hrp_20[2:2:end], runs_hrp_90[2:2:end]])
+for (i2, collection) in enumerate([runs_hrp_20[1:2:end], runs_hrp_90[1:2:end]])
     for (i1, r) in enumerate(collection)
         #io = open(joinpath(dir, "hist_summed", "h_hrp_8000.0eV_20.0deg_summed.hist"), "r")
         io = open(joinpath(dir, "hist_summed", r), "r")
         E0, lim_pitch_deg, seed_value, hmin, hmax, hintervals, his_hrp = deserialize(io)
         close(io)
-        @time his_hrp = rebin(his_hrp, (
-            filter(x -> mod(x, 1e4) == 0, his_hrp.edges[1]),
-            his_hrp.edges[2],
-            his_hrp.edges[3],
-            ))
+        #@time his_hrp = rebin(his_hrp, (
+        #    filter(x -> mod(x, 1e3) == 0, his_hrp.edges[1]),
+        #    his_hrp.edges[2],
+        #    his_hrp.edges[3],
+        #    ))
 
         # compute bin volumes for normalization
         h_edges = his_hrp.edges[1]
@@ -567,7 +567,7 @@ display(f_prod_r_h)
 ##
 # energy vs width plot
 
-CairoMakie.activate!()
+#CairoMakie.activate!()
 #WGLMakie.activate!()
 fig = Figure(size = (800, 450))
 sleep(2)

@@ -19,11 +19,12 @@ include("ode_boris_mover.jl")
 #load cross sections
 include("cross_sections.jl")
 include("get_msis.jl")
+include("ionosphere.jl")
 #include("setup.jl")
 
 
 #using GLMakie
-function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, pitch_angle_distribution)
+function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, ne_int, Te_int, pitch_angle_distribution)
     ##
     # initialize new electron
     
@@ -112,7 +113,7 @@ function initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, 
     v0 = v_n1 .+ v_n2 .+ v_n3
 
     #todo: instead of controlling mfp, just do nPerGyro steps
-    status, r, v, t = ode_boris_mover_mfp(1e-3, r0, v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = true, nPerGyro = nPerGyro)
+    status, r, v, t = ode_boris_mover_mfp(1e-3, r0, v0, -c.qe, c.me, Bin!, cs_all_sum, densityf, ne_int, Te_int, trace = true, nPerGyro = nPerGyro)
     
     #error in gyrocenter:
     dr = sum(r[:, 1:nPerGyro], dims = 2) ./ nPerGyro
@@ -184,7 +185,7 @@ end
 
 
 ##
-function propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
+function propagate_electron(v0, r0, idx_scatter_rec, densityf, ne_int, Te_int, io, c, Bin!, nPerGyro, generation)
     #list of secondary electrons
     secondary_e = []
     
@@ -204,7 +205,7 @@ function propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPer
         #Bin!(B, p) = convergent_vertical_field!(B, p)
         # sample number of mean free paths travelled:
         n_mfp = rand(Exponential())
-        status, r, v, t = ode_boris_mover_mfp(n_mfp, r, v, -c.qe, c.me, Bin!, cs_all_sum, densityf, trace = false, nPerGyro = nPerGyro)
+        status, r, v, t = ode_boris_mover_mfp(n_mfp, r, v, -c.qe, c.me, Bin!, cs_all_sum, densityf, ne_int, Te_int, trace = false, nPerGyro = nPerGyro)
         E = E_ev(norm(v))
 
         if status == 1
@@ -310,7 +311,7 @@ function propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPer
         r0 = se[1]
         v0 = se[2]
         idx_scatter_rec = se[3]
-        propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation+1)
+        propagate_electron(v0, r0, idx_scatter_rec, densityf, ne_int, Te_int, io, c, Bin!, nPerGyro, generation+1)
     end
     nothing
     #return record
@@ -348,6 +349,7 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
     #hmsis = 80e3:1e3: #km
     #densityf = atmospheric_model([[2020, 12, 12, 18, 0, 0]], hmsis, loc_geod[1], loc_geod[2])
 
+    ne_int, Te_int = make_ionosphere()
     # Results directory    
     
     res_file = joinpath(res_dir, "res_$(E0)eV_$(lim_pitch_deg)deg_"*lpad(batch, 4, "0")* ".bin")
@@ -398,8 +400,8 @@ function main(E0, N_electrons, alt0, lim_pitch_deg, loc_gmag, loc_geod, c, res_d
         #record = []
 
         #try
-            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, pitch_angle_distribution)
-            propagate_electron(v0, r0, idx_scatter_rec, densityf, io, c, Bin!, nPerGyro, generation)
+            r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf, ne_int, Te_int, pitch_angle_distribution)
+            propagate_electron(v0, r0, idx_scatter_rec, densityf, ne_int, Te_int, io, c, Bin!, nPerGyro, generation)
         #catch
         #    println("re-initiating electron")
         #    r0, v0 = initialize_primary_electron(E0, loc_gmag, alt0, lim_pitch, c, b_model, nPerGyro, Bin!, densityf)
@@ -470,7 +472,7 @@ axislegend()
 
 """
 OPS = (trace = true,)
-status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, OPS=OPS)
+status, r, v, t = ode_boris_mover_mfp(n_mfp, r0v0, -c.qe, c.me, Bin, cs_all_sum, densityf, ne_int, Te_int, OPS=OPS)
 zs = LinRange(0, 3, 200)
 meshscatter([tuple(p...) for p in eachcol(rp[:, 1:1000])], markersize = 1)#, color = zs)
 
